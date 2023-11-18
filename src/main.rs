@@ -68,10 +68,7 @@ mod tests {
         assert_eq!(horizontal_to_canvas(PI / 2.0, 0.0, 640), (320, 320));
         assert_eq!(horizontal_to_canvas(PI / 2.0, PI / 2.0, 640), (320, 320));
         assert_eq!(horizontal_to_canvas(PI / 2.0, PI, 640), (320, 320));
-        assert_eq!(
-            horizontal_to_canvas(PI / 2.0, 3.0 * PI / 2.0, 640),
-            (320, 320)
-        );
+        assert_eq!(horizontal_to_canvas(PI / 2.0, 3.0 * PI / 2.0, 640), (320, 320));
 
         assert_eq!(horizontal_to_canvas(0.0, 0.0, 640), (320, 640));
         assert_eq!(horizontal_to_canvas(0.0, PI / 2.0, 640), (640, 320));
