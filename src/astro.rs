@@ -32,28 +32,20 @@ mod tests {
 
     #[test]
     fn test_get_phase() {
-        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL).radians - INITIAL_PHASE).abs() < 10.0);
-        assert!((get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).radians - 0.0).abs() < 10.0);
-        assert!((get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).radians - 0.0).abs() < 10.0);
-        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL).radians - 0.0).abs() < 10.0);
+        assert_eq!(get_phase(0.0, INITIAL_PHASE, SIDEREAL).radians, INITIAL_PHASE);
+        assert!(get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
+        assert!(get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
+        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL).radians - 2.0 * PI).abs() < 1e-4);
     }
 
     #[test]
     fn test_get_sun_direction() {
-        assert!(
-            (get_sun_direction(Angle::radians(0.0)) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-9
+        assert_eq!(
+            (get_sun_direction(Angle::radians(0.0)) - vec3::<_, U>(-1.0, 0.0, 0.0)).length(),
+            0.0
         );
-        assert!(
-            (get_sun_direction(Angle::radians(PI / 2.0)) - vec3::<_, U>(0.0, -1.0, 0.0)).length()
-                < 1e-9
-        );
-        assert!(
-            (get_sun_direction(Angle::radians(PI)) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-9
-        );
-        assert!(
-            (get_sun_direction(Angle::radians(3.0 * PI / 2.0)) - vec3::<_, U>(0.0, 1.0, 0.0))
-                .length()
-                < 1e-9
-        );
+        assert!((get_sun_direction(Angle::radians(PI / 2.0)) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(Angle::radians(PI)) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(Angle::radians(3.0 * PI / 2.0)) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
     }
 }
