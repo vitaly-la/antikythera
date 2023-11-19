@@ -7,6 +7,12 @@ enum U {}
 const INITIAL_PHASE: f64 = 1.7247443415579253;
 const SIDEREAL: f64 = 31558144.36363983;
 
+const INITIAL_DAILY_PHASE: f64 = 0.0;
+const SIDEREAL_DAY: f64 = 86164.0905;
+
+const AXIAL_TILT: f64 = 23.44 * PI / 180.0;
+const AXIAL_DIRECTION: f64 = 0.0;
+
 const LAT: f64 = 51.5072 * PI / 180.0;
 const LON: f64 = 0.0;
 
@@ -18,10 +24,36 @@ fn get_sun_direction(phase: Angle<f64>) -> Vector3D<f64, U> {
     -Rotation3D::around_z(phase).transform_vector3d(vec3::<_, U>(1.0, 0.0, 0.0))
 }
 
-fn get_local_normal(lat: f64, lon: f64) -> Vector3D<f64, U> {
-    Rotation3D::around_z(Angle::radians(lon)).transform_vector3d(
-        Rotation3D::<_, _, U>::around_y(-Angle::radians(lat)).transform_vector3d(vec3::<_, U>(1.0, 0.0, 0.0)),
+fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
+    Rotation3D::around_z(Angle::radians(lon))
+        .transform_vector3d(Rotation3D::<_, _, U>::around_y(-Angle::radians(lat)).transform_vector3d(vec))
+}
+
+fn to_recent_coords(daily_phase: Angle<f64>, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
+    Rotation3D::around_z(daily_phase).transform_vector3d(vec)
+}
+
+fn to_global_coords(axial_tilt: f64, axial_direction: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
+    Rotation3D::around_z(Angle::radians(axial_direction)).transform_vector3d(
+        Rotation3D::<_, _, U>::around_y(Angle::radians(axial_tilt)).transform_vector3d(
+            Rotation3D::<_, _, U>::around_z(-Angle::radians(axial_direction)).transform_vector3d(vec),
+        ),
     )
+}
+
+fn get_altitude(normal: Vector3D<f64, U>, to_sun: Vector3D<f64, U>) -> f64 {
+    PI / 2.0 - normal.dot(to_sun).acos()
+}
+
+fn get_azimuth(normal: Vector3D<f64, U>, north: Vector3D<f64, U>, to_sun: Vector3D<f64, U>) -> f64 {
+    let proj = (to_sun - normal * normal.dot(to_sun)).normalize();
+    let angle = north.dot(proj).acos();
+    let east = north.cross(normal);
+    if east.dot(proj) > 0.0 {
+        angle
+    } else {
+        2.0 * PI - angle
+    }
 }
 
 pub fn get_sun_position() -> (f64, f64) {
@@ -31,10 +63,23 @@ pub fn get_sun_position() -> (f64, f64) {
     let phase = get_phase(now, INITIAL_PHASE, SIDEREAL);
     let to_sun = get_sun_direction(phase);
 
-    let local_normal = get_local_normal(LAT, LON);
-    dbg!(to_sun, local_normal);
+    let daily_phase = get_phase(now, INITIAL_DAILY_PHASE, SIDEREAL_DAY);
 
-    (1.0, 1.0)
+    let normal = to_global_coords(
+        AXIAL_TILT,
+        AXIAL_DIRECTION,
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(1.0, 0.0, 0.0))),
+    );
+    let north = to_global_coords(
+        AXIAL_TILT,
+        AXIAL_DIRECTION,
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(0.0, 0.0, 1.0))),
+    );
+
+    let alt = get_altitude(normal, to_sun);
+    let az = get_azimuth(normal, north, to_sun);
+
+    (alt, az)
 }
 
 #[cfg(test)]
@@ -58,12 +103,58 @@ mod tests {
     }
 
     #[test]
-    fn test_get_local_normal() {
-        assert!((get_local_normal(0.0, 0.0) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_local_normal(PI / 2.0, 0.0) - vec3::<_, U>(0.0, 0.0, 1.0)).length() < 1e-15);
-        assert!((get_local_normal(-PI / 2.0, 0.0) - vec3::<_, U>(0.0, 0.0, -1.0)).length() < 1e-15);
-        assert!((get_local_normal(0.0, PI / 2.0) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
-        assert!((get_local_normal(0.0, PI) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_local_normal(0.0, -PI / 2.0) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+    fn test_to_local_coords() {
+        let normal = vec3::<_, U>(1.0, 0.0, 0.0);
+        assert!((to_local_coords(0.0, 0.0, normal) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_local_coords(PI / 2.0, 0.0, normal) - vec3::<_, U>(0.0, 0.0, 1.0)).length() < 1e-15);
+        assert!((to_local_coords(-PI / 2.0, 0.0, normal) - vec3::<_, U>(0.0, 0.0, -1.0)).length() < 1e-15);
+        assert!((to_local_coords(0.0, PI / 2.0, normal) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((to_local_coords(0.0, PI, normal) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_local_coords(0.0, -PI / 2.0, normal) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+    }
+
+    #[test]
+    fn test_to_recent_coords() {
+        let normal = vec3::<_, U>(1.0, 0.0, 0.0);
+        assert!((to_recent_coords(Angle::radians(0.0), normal) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_recent_coords(Angle::radians(PI / 2.0), normal) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+    }
+
+    #[test]
+    fn test_to_global_coords() {
+        let axis = vec3::<_, U>(0.0, 0.0, 1.0);
+        assert!((to_global_coords(0.0, 0.0, axis) - vec3::<_, U>(0.0, 0.0, 1.0)).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, 0.0, axis) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, PI / 2.0, axis) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, -PI / 2.0, axis) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+    }
+
+    #[test]
+    fn test_get_altitude() {
+        assert!((get_altitude(vec3::<_, U>(1.0, 0.0, 0.0), vec3::<_, U>(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
+        assert!((get_altitude(vec3::<_, U>(1.0, 0.0, 0.0), vec3::<_, U>(0.0, 1.0, 0.0)) - 0.0).abs() < 1e-15);
+        assert!((get_altitude(vec3::<_, U>(1.0, 0.0, 0.0), vec3::<_, U>(-1.0, 0.0, 0.0)) + PI / 2.0).abs() < 1e-15);
+    }
+
+    #[test]
+    fn test_get_azimuth() {
+        assert!(
+            (get_azimuth(
+                vec3::<_, U>(0.0, 0.0, 1.0),
+                vec3::<_, U>(0.0, 1.0, 0.0),
+                vec3::<_, U>(0.0, 0.6, 0.8)
+            ) - 2.0 * PI)
+                .abs()
+                < 1e-15
+        );
+        assert!(
+            (get_azimuth(
+                vec3::<_, U>(0.0, 0.0, 1.0),
+                vec3::<_, U>(0.0, 1.0, 0.0),
+                vec3::<_, U>(1.0, 0.0, 0.0)
+            ) - PI / 2.0)
+                .abs()
+                < 1e-15
+        );
     }
 }
