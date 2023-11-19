@@ -1,6 +1,5 @@
 use euclid::{vec3, Angle, Rotation3D, Vector3D};
 use std::f64::consts::PI;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 enum U {}
 
@@ -16,8 +15,8 @@ const AXIAL_DIRECTION: f64 = 1.54075846982669;
 const LAT: f64 = 51.5072 * PI / 180.0;
 const LON: f64 = 0.0;
 
-fn get_phase(now: f64, initial_phase: f64, sidereal: f64) -> Angle<f64> {
-    Angle::radians((initial_phase + (now / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI))
+fn get_phase(ts: f64, initial_phase: f64, sidereal: f64) -> Angle<f64> {
+    Angle::radians((initial_phase + (ts / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI))
 }
 
 fn get_sun_direction(phase: Angle<f64>) -> Vector3D<f64, U> {
@@ -56,14 +55,11 @@ fn get_azimuth(normal: Vector3D<f64, U>, north: Vector3D<f64, U>, to_sun: Vector
     }
 }
 
-pub fn get_sun_position() -> (f64, f64) {
-    let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let now = since_the_epoch.as_secs() as f64 + since_the_epoch.subsec_nanos() as f64 * 1e-9;
-
-    let phase = get_phase(now, INITIAL_PHASE, SIDEREAL);
+pub fn get_sun_position(ts: f64) -> (f64, f64) {
+    let phase = get_phase(ts, INITIAL_PHASE, SIDEREAL);
     let to_sun = get_sun_direction(phase);
 
-    let daily_phase = get_phase(now, INITIAL_DAILY_PHASE, SIDEREAL_DAY);
+    let daily_phase = get_phase(ts, INITIAL_DAILY_PHASE, SIDEREAL_DAY);
 
     let normal = to_global_coords(
         AXIAL_TILT,
