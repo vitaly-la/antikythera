@@ -19,8 +19,8 @@ fn get_now() -> f64 {
 
 fn horizontal_to_canvas(alt: f64, az: f64, size: u32) -> (i16, i16) {
     let r = 1.0 - alt * 2.0 / PI;
-    let x = i16::try_from(size).unwrap() / 2 + (size as f64 / 2.0 * r * az.sin()).round() as i16;
-    let y = i16::try_from(size).unwrap() / 2 + (size as f64 / 2.0 * r * az.cos()).round() as i16;
+    let x = i16::try_from(size).unwrap() / 2 - (size as f64 / 2.0 * r * az.sin()).round() as i16;
+    let y = i16::try_from(size).unwrap() / 2 - (size as f64 / 2.0 * r * az.cos()).round() as i16;
     (x, y)
 }
 
@@ -82,11 +82,11 @@ mod tests {
         assert_eq!(horizontal_to_canvas(PI / 2.0, PI, 640), (320, 320));
         assert_eq!(horizontal_to_canvas(PI / 2.0, 3.0 * PI / 2.0, 640), (320, 320));
 
-        assert_eq!(horizontal_to_canvas(0.0, 0.0, 640), (320, 640));
-        assert_eq!(horizontal_to_canvas(0.0, PI / 2.0, 640), (640, 320));
-        assert_eq!(horizontal_to_canvas(0.0, PI, 640), (320, 0));
-        assert_eq!(horizontal_to_canvas(0.0, 3.0 * PI / 2.0, 640), (0, 320));
+        assert_eq!(horizontal_to_canvas(0.0, 0.0, 640), (320, 0));
+        assert_eq!(horizontal_to_canvas(0.0, PI / 2.0, 640), (0, 320));
+        assert_eq!(horizontal_to_canvas(0.0, PI, 640), (320, 640));
+        assert_eq!(horizontal_to_canvas(0.0, 3.0 * PI / 2.0, 640), (640, 320));
 
-        assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, 640), (320, 960));
+        assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, 640), (320, -320));
     }
 }
