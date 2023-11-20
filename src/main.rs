@@ -36,12 +36,12 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(127, 127, 127));
+    canvas.set_draw_color(Color::RGB(85, 85, 85));
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
-        canvas.set_draw_color(Color::RGB(127, 127, 127));
+        canvas.set_draw_color(Color::RGB(85, 85, 85));
         canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
@@ -64,7 +64,7 @@ fn main() {
 
         let (alt, az) = get_moon_position(now);
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.filled_circle(x, y, 10, Color::RGB(191, 191, 191));
+        _ = canvas.filled_circle(x, y, 10, Color::RGB(170, 170, 170));
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
