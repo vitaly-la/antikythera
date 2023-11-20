@@ -1,6 +1,6 @@
 extern crate sdl2;
 
-use astro::get_sun_position;
+use astro::{get_moon_position, get_sun_position};
 use sdl2::event::Event;
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::keyboard::Keycode;
@@ -12,16 +12,16 @@ mod astro;
 
 const CANVAS_SIZE: u32 = 640;
 
+fn get_now() -> f64 {
+    let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    since_the_epoch.as_secs() as f64 + since_the_epoch.subsec_nanos() as f64 * 1e-9
+}
+
 fn horizontal_to_canvas(alt: f64, az: f64, size: u32) -> (i16, i16) {
     let r = 1.0 - alt * 2.0 / PI;
     let x = i16::try_from(size).unwrap() / 2 + (size as f64 / 2.0 * r * az.sin()).round() as i16;
     let y = i16::try_from(size).unwrap() / 2 + (size as f64 / 2.0 * r * az.cos()).round() as i16;
     (x, y)
-}
-
-fn now() -> f64 {
-    let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    since_the_epoch.as_secs() as f64 + since_the_epoch.subsec_nanos() as f64 * 1e-9
 }
 
 fn main() {
@@ -55,9 +55,16 @@ fn main() {
         }
         // The rest of the game loop goes here...
         _ = canvas.filled_circle(320, 320, 320, Color::RGB(0, 0, 0));
-        let (alt, az) = get_sun_position(now());
+
+        let now = get_now();
+
+        let (alt, az) = get_sun_position(now);
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
         _ = canvas.filled_circle(x, y, 10, Color::RGB(255, 255, 255));
+
+        let (alt, az) = get_moon_position(now);
+        let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
+        _ = canvas.filled_circle(x, y, 10, Color::RGB(191, 191, 191));
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
