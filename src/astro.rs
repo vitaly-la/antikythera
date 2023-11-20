@@ -15,8 +15,8 @@ const AXIAL_DIRECTION: f64 = 1.54075846982669;
 const LAT: f64 = 51.5072 * PI / 180.0;
 const LON: f64 = 0.0;
 
-const INITIAL_MOON_PHASE: f64 = 3.4889796913096998;
-const SIDEREAL_MONTH: f64 = 27.321661 * 24.0 * 60.0 * 60.0;
+const INITIAL_MOON_PHASE: f64 = 5.0;
+const SIDEREAL_MONTH: f64 = 27.321661547 * 24.0 * 60.0 * 60.0;
 
 fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
     Rotation3D::around_z(Angle::radians(lon))
