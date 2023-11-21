@@ -15,7 +15,7 @@ const AXIAL_DIRECTION: f64 = 1.5407643946374219; // average solstice
 const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
 const LON: f64 = 0.0; // greenwich
 
-const INITIAL_MOON_PHASE: f64 = 5.0;
+const INITIAL_MOON_PHASE: f64 = 4.1;
 const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // from stellarium
 
 fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
