@@ -3,6 +3,18 @@ use std::f64::consts::PI;
 
 enum U {}
 
+pub struct Star {
+    pub ascension: f64,
+    pub declination: f64,
+    pub magnitude: f64,
+}
+
+pub struct Engine {
+    ts: f64,
+    normal: Vector3D<f64, U>,
+    north: Vector3D<f64, U>,
+}
+
 const INITIAL_PHASE: f64 = 1.7247432929978155; // average from horizons
 const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // from stellarium
 
@@ -22,6 +34,10 @@ const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // from stellarium
 const INITIAL_NODAL_PHASE: f64 = 0.0;
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
+fn get_phase(ts: f64, initial_phase: f64, sidereal: f64) -> Angle<f64> {
+    Angle::radians((initial_phase + (ts / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI))
+}
+
 fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
     Rotation3D::around_z(Angle::radians(lon))
         .transform_vector3d(Rotation3D::<_, _, U>::around_y(-Angle::radians(lat)).transform_vector3d(vec))
@@ -39,8 +55,19 @@ fn to_global_coords(axial_tilt: f64, axial_direction: f64, vec: Vector3D<f64, U>
     )
 }
 
-fn get_phase(ts: f64, initial_phase: f64, sidereal: f64) -> Angle<f64> {
-    Angle::radians((initial_phase + (ts / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI))
+fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
+    let daily_phase = get_phase(ts, INITIAL_DAILY_PHASE, SIDEREAL_DAY);
+    let normal = to_global_coords(
+        AXIAL_TILT,
+        AXIAL_DIRECTION,
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(1.0, 0.0, 0.0))),
+    );
+    let north = to_global_coords(
+        AXIAL_TILT,
+        AXIAL_DIRECTION,
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(0.0, 0.0, 1.0))),
+    );
+    (normal, north)
 }
 
 fn get_sun_direction(phase: Angle<f64>) -> Vector3D<f64, U> {
@@ -52,7 +79,7 @@ fn get_moon_direction(moon_phase: Angle<f64>) -> Vector3D<f64, U> {
 }
 
 fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: Angle<f64>) -> Vector3D<f64, U> {
-    _ = (inclination, nodal_phase);
+    _ = (inclination, nodal_phase); // TODO: calculate inclined direction + add tests
     to_moon
 }
 
@@ -71,51 +98,60 @@ fn get_azimuth(normal: Vector3D<f64, U>, north: Vector3D<f64, U>, to_sun: Vector
     }
 }
 
-fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
-    let daily_phase = get_phase(ts, INITIAL_DAILY_PHASE, SIDEREAL_DAY);
-    let normal = to_global_coords(
-        AXIAL_TILT,
-        AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(1.0, 0.0, 0.0))),
-    );
-    let north = to_global_coords(
-        AXIAL_TILT,
-        AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(0.0, 0.0, 1.0))),
-    );
-    (normal, north)
-}
+impl Engine {
+    pub fn new(ts: f64) -> Self {
+        let (normal, north) = get_normal_and_north(ts);
+        Self { ts, normal, north }
+    }
 
-pub fn get_sun_position(ts: f64) -> (f64, f64) {
-    let (normal, north) = get_normal_and_north(ts);
+    pub fn get_star_position(&self, star: &Star) -> (f64, f64) {
+        let to_star = to_global_coords(
+            AXIAL_TILT,
+            AXIAL_DIRECTION,
+            to_local_coords(star.declination, star.ascension, vec3::<_, U>(1.0, 0.0, 0.0)),
+        );
 
-    let phase = get_phase(ts, INITIAL_PHASE, SIDEREAL);
-    let to_sun = get_sun_direction(phase);
+        let alt = get_altitude(self.normal, to_star);
+        let az = get_azimuth(self.normal, self.north, to_star);
 
-    let alt = get_altitude(normal, to_sun);
-    let az = get_azimuth(normal, north, to_sun);
+        (alt, az)
+    }
 
-    (alt, az)
-}
+    pub fn get_sun_position(&self) -> (f64, f64) {
+        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
+        let to_sun = get_sun_direction(phase);
 
-pub fn get_moon_position(ts: f64) -> (f64, f64) {
-    let (normal, north) = get_normal_and_north(ts);
+        let alt = get_altitude(self.normal, to_sun);
+        let az = get_azimuth(self.normal, self.north, to_sun);
 
-    let moon_phase = get_phase(ts, INITIAL_MOON_PHASE, SIDEREAL_MONTH);
-    let to_moon = get_moon_direction(moon_phase);
+        (alt, az)
+    }
 
-    let nodal_phase = get_phase(ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
-    let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
+    pub fn get_moon_position(&self) -> (f64, f64) {
+        let moon_phase = get_phase(self.ts, INITIAL_MOON_PHASE, SIDEREAL_MONTH);
+        let to_moon = get_moon_direction(moon_phase);
 
-    let alt = get_altitude(normal, to_moon);
-    let az = get_azimuth(normal, north, to_moon);
+        let nodal_phase = get_phase(self.ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
+        let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
 
-    (alt, az)
+        let alt = get_altitude(self.normal, to_moon);
+        let az = get_azimuth(self.normal, self.north, to_moon);
+
+        (alt, az)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_phase() {
+        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL).radians - INITIAL_PHASE).abs() < 1e-4);
+        assert!(get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
+        assert!(get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
+        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL).radians - 2.0 * PI).abs() < 1e-4);
+    }
 
     #[test]
     fn test_to_local_coords() {
@@ -142,14 +178,6 @@ mod tests {
         assert!((to_global_coords(PI / 2.0, 0.0, axis) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
         assert!((to_global_coords(PI / 2.0, PI / 2.0, axis) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
         assert!((to_global_coords(PI / 2.0, -PI / 2.0, axis) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
-    }
-
-    #[test]
-    fn test_get_phase() {
-        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL).radians - INITIAL_PHASE).abs() < 1e-4);
-        assert!(get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
-        assert!(get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
-        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL).radians - 2.0 * PI).abs() < 1e-4);
     }
 
     #[test]
