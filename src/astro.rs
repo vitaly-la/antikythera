@@ -18,6 +18,10 @@ const LON: f64 = 0.0; // greenwich
 const INITIAL_MOON_PHASE: f64 = 4.1;
 const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // from stellarium
 
+const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // from stellarium
+const INITIAL_NODAL_PHASE: f64 = 0.0;
+const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
+
 fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
     Rotation3D::around_z(Angle::radians(lon))
         .transform_vector3d(Rotation3D::<_, _, U>::around_y(-Angle::radians(lat)).transform_vector3d(vec))
@@ -45,6 +49,11 @@ fn get_sun_direction(phase: Angle<f64>) -> Vector3D<f64, U> {
 
 fn get_moon_direction(moon_phase: Angle<f64>) -> Vector3D<f64, U> {
     Rotation3D::around_z(-moon_phase).transform_vector3d(vec3::<_, U>(1.0, 0.0, 0.0))
+}
+
+fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: Angle<f64>) -> Vector3D<f64, U> {
+    _ = (inclination, nodal_phase);
+    to_moon
 }
 
 fn get_altitude(normal: Vector3D<f64, U>, to_sun: Vector3D<f64, U>) -> f64 {
@@ -94,6 +103,9 @@ pub fn get_moon_position(ts: f64) -> (f64, f64) {
 
     let moon_phase = get_phase(ts, INITIAL_MOON_PHASE, SIDEREAL_MONTH);
     let to_moon = get_moon_direction(moon_phase);
+
+    let nodal_phase = get_phase(ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
+    let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
 
     let alt = get_altitude(normal, to_moon);
     let az = get_azimuth(normal, north, to_moon);
