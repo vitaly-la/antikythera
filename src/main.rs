@@ -1,16 +1,34 @@
 extern crate sdl2;
 
-use astro::{get_moon_position, get_sun_position};
+use astro::{Engine, Star};
 use sdl2::event::Event;
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use std::f64::consts::PI;
+use std::fs::read_to_string;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 mod astro;
 
 const CANVAS_SIZE: u32 = 640;
+
+fn read_stars(filename: &str) -> Vec<Star> {
+    let mut stars = Vec::new();
+    for line in read_to_string(filename).unwrap().lines() {
+        let mut parts = line.split_whitespace();
+        let hour = parts.next().unwrap().parse::<f64>().unwrap();
+        let minute = parts.next().unwrap().parse::<f64>().unwrap();
+        let declination = parts.next().unwrap().parse::<f64>().unwrap();
+        let magnitude = parts.next().unwrap().parse::<f64>().unwrap();
+        stars.push(Star {
+            ascension: (hour * 60.0 + minute) / 24.0 / 60.0 * 2.0 * PI,
+            declination: declination / 180.0 * PI,
+            magnitude: magnitude,
+        });
+    }
+    stars
+}
 
 fn get_now() -> f64 {
     let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -24,7 +42,25 @@ fn horizontal_to_canvas(alt: f64, az: f64, size: u32) -> (i16, i16) {
     (x, y)
 }
 
+fn magnitude_to_sz_bri(magnitude: f64) -> (i16, u8) {
+    if magnitude < -1.0 {
+        (5, 255)
+    } else if magnitude < 0.0 {
+        (4, 255)
+    } else if magnitude < 1.0 {
+        (3, 255)
+    } else if magnitude < 2.0 {
+        (2, 255)
+    } else if magnitude < 3.0 {
+        (1, 255)
+    } else {
+        (1, 127)
+    }
+}
+
 fn main() {
+    let stars = read_stars("stars");
+
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -56,13 +92,20 @@ fn main() {
         // The rest of the game loop goes here...
         _ = canvas.filled_circle(320, 320, 320, Color::RGB(0, 0, 0));
 
-        let now = get_now();
+        let engine = Engine::new(get_now());
 
-        let (alt, az) = get_sun_position(now);
+        for star in &stars {
+            let (alt, az) = engine.get_star_position(star);
+            let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
+            let (sz, bri) = magnitude_to_sz_bri(star.magnitude);
+            _ = canvas.filled_circle(x, y, sz, Color::RGB(bri, bri, bri));
+        }
+
+        let (alt, az) = engine.get_sun_position();
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
         _ = canvas.filled_circle(x, y, 10, Color::RGB(255, 255, 255));
 
-        let (alt, az) = get_moon_position(now);
+        let (alt, az) = engine.get_moon_position();
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
         _ = canvas.filled_circle(x, y, 10, Color::RGB(170, 170, 170));
 
@@ -88,5 +131,15 @@ mod tests {
         assert_eq!(horizontal_to_canvas(0.0, 3.0 * PI / 2.0, 640), (640, 320));
 
         assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, 640), (320, -320));
+    }
+
+    #[test]
+    fn test_magnitude_to_sz_bri() {
+        assert_eq!(magnitude_to_sz_bri(-1.5), (5, 255));
+        assert_eq!(magnitude_to_sz_bri(-0.5), (4, 255));
+        assert_eq!(magnitude_to_sz_bri(0.5), (3, 255));
+        assert_eq!(magnitude_to_sz_bri(1.5), (2, 255));
+        assert_eq!(magnitude_to_sz_bri(2.5), (1, 255));
+        assert_eq!(magnitude_to_sz_bri(3.5), (1, 127));
     }
 }
