@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 mod astro;
 
-const CANVAS_SIZE: u32 = 640;
+const CANVAS_SIZE: u32 = 960;
 
 fn read_stars(filename: &str) -> Vec<Star> {
     let mut stars = Vec::new();
@@ -72,12 +72,12 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(85, 85, 85));
+    canvas.set_draw_color(Color::RGB(5, 5, 5));
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
-        canvas.set_draw_color(Color::RGB(85, 85, 85));
+        canvas.set_draw_color(Color::RGB(5, 5, 5));
         canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
@@ -90,7 +90,8 @@ fn main() {
             }
         }
         // The rest of the game loop goes here...
-        _ = canvas.filled_circle(320, 320, 320, Color::RGB(0, 0, 0));
+        let size = (CANVAS_SIZE / 2).try_into().unwrap();
+        _ = canvas.filled_circle(size, size, size, Color::RGB(0, 0, 0));
 
         let engine = Engine::new(get_now());
 
@@ -103,11 +104,11 @@ fn main() {
 
         let (alt, az) = engine.get_sun_position();
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.filled_circle(x, y, 10, Color::RGB(255, 255, 255));
+        _ = canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255));
 
         let (alt, az) = engine.get_moon_position();
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.filled_circle(x, y, 10, Color::RGB(170, 170, 170));
+        _ = canvas.filled_circle(x, y, 15, Color::RGB(127, 127, 127));
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
