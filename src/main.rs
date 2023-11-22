@@ -54,7 +54,7 @@ fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
     } else if magnitude < 3.0 {
         (1, 255)
     } else {
-        (1, 127)
+        (0, 255)
     }
 }
 
@@ -72,12 +72,12 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(10, 10, 10));
+    canvas.set_draw_color(Color::RGB(12, 12, 12));
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
-        canvas.set_draw_color(Color::RGB(10, 10, 10));
+        canvas.set_draw_color(Color::RGB(12, 12, 12));
         canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
@@ -99,7 +99,10 @@ fn main() {
             let (alt, az) = engine.get_star_position(star);
             let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
             let (size, brightness) = magnitude_to_size_and_brightness(star.magnitude);
-            _ = canvas.filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness));
+            _ = match size {
+                0 => canvas.pixel(x, y, Color::RGB(brightness, brightness, brightness)),
+                _ => canvas.filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness)),
+            }
         }
 
         let (alt, az) = engine.get_sun_position();
@@ -141,6 +144,6 @@ mod tests {
         assert_eq!(magnitude_to_size_and_brightness(0.5), (3, 255));
         assert_eq!(magnitude_to_size_and_brightness(1.5), (2, 255));
         assert_eq!(magnitude_to_size_and_brightness(2.5), (1, 255));
-        assert_eq!(magnitude_to_size_and_brightness(3.5), (1, 127));
+        assert_eq!(magnitude_to_size_and_brightness(3.5), (0, 255));
     }
 }
