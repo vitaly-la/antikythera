@@ -42,7 +42,7 @@ fn horizontal_to_canvas(alt: f64, az: f64, size: u32) -> (i16, i16) {
     (x, y)
 }
 
-fn magnitude_to_sz_bri(magnitude: f64) -> (i16, u8) {
+fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
     if magnitude < -1.0 {
         (5, 255)
     } else if magnitude < 0.0 {
@@ -98,8 +98,8 @@ fn main() {
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
             let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-            let (sz, bri) = magnitude_to_sz_bri(star.magnitude);
-            _ = canvas.filled_circle(x, y, sz, Color::RGB(bri, bri, bri));
+            let (size, brightness) = magnitude_to_size_and_brightness(star.magnitude);
+            _ = canvas.filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness));
         }
 
         let (alt, az) = engine.get_sun_position();
@@ -136,11 +136,11 @@ mod tests {
 
     #[test]
     fn test_magnitude_to_sz_bri() {
-        assert_eq!(magnitude_to_sz_bri(-1.5), (5, 255));
-        assert_eq!(magnitude_to_sz_bri(-0.5), (4, 255));
-        assert_eq!(magnitude_to_sz_bri(0.5), (3, 255));
-        assert_eq!(magnitude_to_sz_bri(1.5), (2, 255));
-        assert_eq!(magnitude_to_sz_bri(2.5), (1, 255));
-        assert_eq!(magnitude_to_sz_bri(3.5), (1, 127));
+        assert_eq!(magnitude_to_size_and_brightness(-1.5), (5, 255));
+        assert_eq!(magnitude_to_size_and_brightness(-0.5), (4, 255));
+        assert_eq!(magnitude_to_size_and_brightness(0.5), (3, 255));
+        assert_eq!(magnitude_to_size_and_brightness(1.5), (2, 255));
+        assert_eq!(magnitude_to_size_and_brightness(2.5), (1, 255));
+        assert_eq!(magnitude_to_size_and_brightness(3.5), (1, 127));
     }
 }
