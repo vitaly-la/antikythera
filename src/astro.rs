@@ -63,22 +63,22 @@ fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
     let normal = to_global_coords(
         AXIAL_TILT,
         AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(1.0, 0.0, 0.0))),
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3(1.0, 0.0, 0.0))),
     );
     let north = to_global_coords(
         AXIAL_TILT,
         AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3::<_, U>(0.0, 0.0, 1.0))),
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3(0.0, 0.0, 1.0))),
     );
     (normal, north)
 }
 
 fn get_sun_direction(phase: f64) -> Vector3D<f64, U> {
-    -rot_z(phase, vec3::<_, U>(1.0, 0.0, 0.0))
+    -rot_z(phase, vec3(1.0, 0.0, 0.0))
 }
 
 fn get_moon_direction(moon_phase: f64) -> Vector3D<f64, U> {
-    rot_z(-moon_phase, vec3::<_, U>(1.0, 0.0, 0.0))
+    rot_z(-moon_phase, vec3(1.0, 0.0, 0.0))
 }
 
 fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: f64) -> Vector3D<f64, U> {
@@ -111,7 +111,7 @@ impl Engine {
         let to_star = to_global_coords(
             AXIAL_TILT,
             AXIAL_DIRECTION,
-            to_local_coords(star.declination, star.ascension, vec3::<_, U>(1.0, 0.0, 0.0)),
+            to_local_coords(star.declination, star.ascension, vec3(1.0, 0.0, 0.0)),
         );
 
         let alt = get_altitude(self.normal, to_star);
@@ -158,70 +158,54 @@ mod tests {
 
     #[test]
     fn test_to_local_coords() {
-        let normal = vec3::<_, U>(1.0, 0.0, 0.0);
-        assert!((to_local_coords(0.0, 0.0, normal) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_local_coords(PI / 2.0, 0.0, normal) - vec3::<_, U>(0.0, 0.0, 1.0)).length() < 1e-15);
-        assert!((to_local_coords(-PI / 2.0, 0.0, normal) - vec3::<_, U>(0.0, 0.0, -1.0)).length() < 1e-15);
-        assert!((to_local_coords(0.0, PI / 2.0, normal) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
-        assert!((to_local_coords(0.0, PI, normal) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_local_coords(0.0, -PI / 2.0, normal) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+        let normal = vec3(1.0, 0.0, 0.0);
+        assert!((to_local_coords(0.0, 0.0, normal) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_local_coords(PI / 2.0, 0.0, normal) - vec3(0.0, 0.0, 1.0)).length() < 1e-15);
+        assert!((to_local_coords(-PI / 2.0, 0.0, normal) - vec3(0.0, 0.0, -1.0)).length() < 1e-15);
+        assert!((to_local_coords(0.0, PI / 2.0, normal) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((to_local_coords(0.0, PI, normal) - vec3(-1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_local_coords(0.0, -PI / 2.0, normal) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
     fn test_to_recent_coords() {
-        let normal = vec3::<_, U>(1.0, 0.0, 0.0);
-        assert!((to_recent_coords(0.0, normal) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_recent_coords(PI / 2.0, normal) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+        let normal = vec3(1.0, 0.0, 0.0);
+        assert!((to_recent_coords(0.0, normal) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_recent_coords(PI / 2.0, normal) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
     fn test_to_global_coords() {
-        let axis = vec3::<_, U>(0.0, 0.0, 1.0);
-        assert!((to_global_coords(0.0, 0.0, axis) - vec3::<_, U>(0.0, 0.0, 1.0)).length() < 1e-15);
-        assert!((to_global_coords(PI / 2.0, 0.0, axis) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_global_coords(PI / 2.0, PI / 2.0, axis) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
-        assert!((to_global_coords(PI / 2.0, -PI / 2.0, axis) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+        let axis = vec3(0.0, 0.0, 1.0);
+        assert!((to_global_coords(0.0, 0.0, axis) - vec3(0.0, 0.0, 1.0)).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, 0.0, axis) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, PI / 2.0, axis) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, -PI / 2.0, axis) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
     fn test_get_sun_direction() {
-        assert!((get_sun_direction(0.0) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(PI / 2.0) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(PI) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(3.0 * PI / 2.0) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(0.0) - vec3(-1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(PI / 2.0) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(PI) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(3.0 * PI / 2.0) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
     fn test_get_moon_direction() {
-        assert!((get_moon_direction(PI / 2.0) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+        assert!((get_moon_direction(PI / 2.0) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
     fn test_get_altitude() {
-        assert!((get_altitude(vec3::<_, U>(1.0, 0.0, 0.0), vec3::<_, U>(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
-        assert!((get_altitude(vec3::<_, U>(1.0, 0.0, 0.0), vec3::<_, U>(0.0, 1.0, 0.0)) - 0.0).abs() < 1e-15);
-        assert!((get_altitude(vec3::<_, U>(1.0, 0.0, 0.0), vec3::<_, U>(-1.0, 0.0, 0.0)) + PI / 2.0).abs() < 1e-15);
+        assert!((get_altitude(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
+        assert!((get_altitude(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0)) - 0.0).abs() < 1e-15);
+        assert!((get_altitude(vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0)) + PI / 2.0).abs() < 1e-15);
     }
 
     #[test]
     fn test_get_azimuth() {
-        assert!(
-            (get_azimuth(
-                vec3::<_, U>(0.0, 0.0, 1.0),
-                vec3::<_, U>(0.0, 1.0, 0.0),
-                vec3::<_, U>(0.0, 0.6, 0.8)
-            ) - 2.0 * PI)
-                .abs()
-                < 1e-15
-        );
-        assert!(
-            (get_azimuth(
-                vec3::<_, U>(0.0, 0.0, 1.0),
-                vec3::<_, U>(0.0, 1.0, 0.0),
-                vec3::<_, U>(1.0, 0.0, 0.0)
-            ) - PI / 2.0)
-                .abs()
-                < 1e-15
-        );
+        assert!((get_azimuth(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.6, 0.8)) - 2.0 * PI).abs() < 1e-15);
+        assert!((get_azimuth(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
     }
 }
