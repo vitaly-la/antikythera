@@ -59,7 +59,7 @@ fn magnitude_to_sz_bri(magnitude: f64) -> (i16, u8) {
 }
 
 fn main() {
-    let stars = read_stars("stars");
+    let stars = read_stars("stars.dat");
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
