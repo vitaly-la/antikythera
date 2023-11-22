@@ -72,12 +72,12 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(5, 5, 5));
+    canvas.set_draw_color(Color::RGB(10, 10, 10));
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
-        canvas.set_draw_color(Color::RGB(5, 5, 5));
+        canvas.set_draw_color(Color::RGB(10, 10, 10));
         canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
