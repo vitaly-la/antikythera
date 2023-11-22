@@ -34,25 +34,28 @@ const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // from stellarium
 const INITIAL_NODAL_PHASE: f64 = 0.0;
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
-fn get_phase(ts: f64, initial_phase: f64, sidereal: f64) -> Angle<f64> {
-    Angle::radians((initial_phase + (ts / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI))
+fn rot_y(angle: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
+    Rotation3D::around_y(Angle::radians(angle)).transform_vector3d(vec)
+}
+
+fn rot_z(angle: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
+    Rotation3D::around_z(Angle::radians(angle)).transform_vector3d(vec)
+}
+
+fn get_phase(ts: f64, initial_phase: f64, sidereal: f64) -> f64 {
+    (initial_phase + (ts / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI)
 }
 
 fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
-    Rotation3D::around_z(Angle::radians(lon))
-        .transform_vector3d(Rotation3D::<_, _, U>::around_y(-Angle::radians(lat)).transform_vector3d(vec))
+    rot_z(lon, rot_y(-lat, vec))
 }
 
-fn to_recent_coords(daily_phase: Angle<f64>, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
-    Rotation3D::around_z(daily_phase).transform_vector3d(vec)
+fn to_recent_coords(daily_phase: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
+    rot_z(daily_phase, vec)
 }
 
 fn to_global_coords(axial_tilt: f64, axial_direction: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
-    Rotation3D::around_z(Angle::radians(axial_direction)).transform_vector3d(
-        Rotation3D::<_, _, U>::around_y(Angle::radians(axial_tilt)).transform_vector3d(
-            Rotation3D::<_, _, U>::around_z(-Angle::radians(axial_direction)).transform_vector3d(vec),
-        ),
-    )
+    rot_z(axial_direction, rot_y(axial_tilt, rot_z(-axial_direction, vec)))
 }
 
 fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
@@ -70,16 +73,16 @@ fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
     (normal, north)
 }
 
-fn get_sun_direction(phase: Angle<f64>) -> Vector3D<f64, U> {
-    -Rotation3D::around_z(phase).transform_vector3d(vec3::<_, U>(1.0, 0.0, 0.0))
+fn get_sun_direction(phase: f64) -> Vector3D<f64, U> {
+    -rot_z(phase, vec3::<_, U>(1.0, 0.0, 0.0))
 }
 
-fn get_moon_direction(moon_phase: Angle<f64>) -> Vector3D<f64, U> {
-    Rotation3D::around_z(-moon_phase).transform_vector3d(vec3::<_, U>(1.0, 0.0, 0.0))
+fn get_moon_direction(moon_phase: f64) -> Vector3D<f64, U> {
+    rot_z(-moon_phase, vec3::<_, U>(1.0, 0.0, 0.0))
 }
 
-fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: Angle<f64>) -> Vector3D<f64, U> {
-    _ = (inclination, nodal_phase); // TODO: calculate inclined direction + add tests
+fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: f64) -> Vector3D<f64, U> {
+    _ = (inclination, nodal_phase);
     to_moon
 }
 
@@ -147,10 +150,10 @@ mod tests {
 
     #[test]
     fn test_get_phase() {
-        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL).radians - INITIAL_PHASE).abs() < 1e-4);
-        assert!(get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
-        assert!(get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).radians.abs() < 1e-4);
-        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL).radians - 2.0 * PI).abs() < 1e-4);
+        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL) - INITIAL_PHASE).abs() < 1e-4);
+        assert!(get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).abs() < 1e-4);
+        assert!(get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).abs() < 1e-4);
+        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL) - 2.0 * PI).abs() < 1e-4);
     }
 
     #[test]
@@ -167,8 +170,8 @@ mod tests {
     #[test]
     fn test_to_recent_coords() {
         let normal = vec3::<_, U>(1.0, 0.0, 0.0);
-        assert!((to_recent_coords(Angle::radians(0.0), normal) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_recent_coords(Angle::radians(PI / 2.0), normal) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((to_recent_coords(0.0, normal) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((to_recent_coords(PI / 2.0, normal) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
@@ -182,15 +185,15 @@ mod tests {
 
     #[test]
     fn test_get_sun_direction() {
-        assert!((get_sun_direction(Angle::radians(0.0)) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(Angle::radians(PI / 2.0)) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(Angle::radians(PI)) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(Angle::radians(3.0 * PI / 2.0)) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(0.0) - vec3::<_, U>(-1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(PI / 2.0) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(PI) - vec3::<_, U>(1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(3.0 * PI / 2.0) - vec3::<_, U>(0.0, 1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
     fn test_get_moon_direction() {
-        assert!((get_moon_direction(Angle::radians(PI / 2.0)) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
+        assert!((get_moon_direction(PI / 2.0) - vec3::<_, U>(0.0, -1.0, 0.0)).length() < 1e-15);
     }
 
     #[test]
