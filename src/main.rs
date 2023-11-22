@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn test_magnitude_to_sz_bri() {
+    fn test_magnitude_to_size_and_brightness() {
         assert_eq!(magnitude_to_size_and_brightness(-1.5), (5, 255));
         assert_eq!(magnitude_to_size_and_brightness(-0.5), (4, 255));
         assert_eq!(magnitude_to_size_and_brightness(0.5), (3, 255));
