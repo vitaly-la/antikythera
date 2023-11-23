@@ -27,11 +27,11 @@ const AXIAL_DIRECTION: f64 = 1.5407643946374219; // average solstice
 const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
 const LON: f64 = 0.0; // greenwich
 
-const INITIAL_MOON_PHASE: f64 = 3.475;
+const INITIAL_MOON_PHASE: f64 = 3.514; // from eclipse
 const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // from stellarium
 
 const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // from stellarium
-const INITIAL_NODAL_PHASE: f64 = 0.0;
+const INITIAL_NODAL_PHASE: f64 = 5.125; // from eclipse
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
 fn rot_y(angle: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
@@ -82,8 +82,7 @@ fn get_moon_direction(moon_phase: f64) -> Vector3D<f64, U> {
 }
 
 fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: f64) -> Vector3D<f64, U> {
-    _ = (inclination, nodal_phase);
-    to_moon
+    rot_z(-nodal_phase, rot_y(-inclination, rot_z(nodal_phase, to_moon)))
 }
 
 fn get_altitude(normal: Vector3D<f64, U>, to_sun: Vector3D<f64, U>) -> f64 {
@@ -194,6 +193,15 @@ mod tests {
     #[test]
     fn test_get_moon_direction() {
         assert!((get_moon_direction(PI / 2.0) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
+    }
+
+    #[test]
+    fn test_get_inclined_direction() {
+        assert!((get_inclined_direction(vec3(1.0, 0.0, 0.0), PI / 2.0, 0.0) - vec3(0.0, 0.0, 1.0)).length() < 1e-15);
+        assert!((get_inclined_direction(vec3(0.0, 0.0, 1.0), PI / 2.0, 0.0) - vec3(-1.0, 0.0, 0.0)).length() < 1e-15);
+        assert!(
+            (get_inclined_direction(vec3(0.0, 0.0, 1.0), PI / 2.0, PI / 2.0) - vec3(0.0, 1.0, 0.0)).length() < 1e-15
+        );
     }
 
     #[test]
