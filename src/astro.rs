@@ -1,5 +1,6 @@
-use euclid::{vec3, Angle, Rotation3D, Vector3D};
 use std::f64::consts::PI;
+
+use euclid::{vec3, Angle, Rotation3D, Vector3D};
 
 enum U {}
 
@@ -100,6 +101,15 @@ fn get_azimuth(normal: Vector3D<f64, U>, north: Vector3D<f64, U>, to_sun: Vector
     }
 }
 
+fn get_lunar_phase(to_sun: Vector3D<f64, U>, to_moon: Vector3D<f64, U>) -> f64 {
+    let angle = to_sun.dot(to_moon).acos();
+    if to_sun.cross(to_moon).dot(vec3(0.0, 0.0, 1.0)) > 0.0 {
+        angle
+    } else {
+        2.0 * PI - angle
+    }
+}
+
 impl Engine {
     pub fn new(ts: f64) -> Self {
         let (normal, north) = get_normal_and_north(ts);
@@ -129,17 +139,21 @@ impl Engine {
         (alt, az)
     }
 
-    pub fn get_moon_position(&self) -> (f64, f64) {
+    pub fn get_moon_position(&self) -> (f64, f64, f64) {
         let moon_phase = get_phase(self.ts, INITIAL_MOON_PHASE, SIDEREAL_MONTH);
         let to_moon = get_moon_direction(moon_phase);
 
         let nodal_phase = get_phase(self.ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
         let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
 
+        let sun_phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
+        let to_sun = get_sun_direction(sun_phase);
+
         let alt = get_altitude(self.normal, to_moon);
         let az = get_azimuth(self.normal, self.north, to_moon);
+        let lunar_phase = get_lunar_phase(to_sun, to_moon);
 
-        (alt, az)
+        (alt, az, lunar_phase)
     }
 }
 
@@ -215,5 +229,13 @@ mod tests {
     fn test_get_azimuth() {
         assert!((get_azimuth(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.6, 0.8)) - 2.0 * PI).abs() < 1e-15);
         assert!((get_azimuth(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
+    }
+
+    #[test]
+    fn test_get_lunar_phase() {
+        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0)) - 2.0 * PI).abs() < 1e-15);
+        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0)) - PI / 2.0).abs() < 1e-15);
+        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0)) - PI).abs() < 1e-15);
+        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(0.0, -1.0, 0.0)) - 3.0 * PI / 2.0).abs() < 1e-15);
     }
 }
