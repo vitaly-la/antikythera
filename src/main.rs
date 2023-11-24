@@ -1,13 +1,17 @@
 extern crate sdl2;
 
-use astro::{Engine, Star};
-use sdl2::event::Event;
-use sdl2::gfx::primitives::DrawRenderer;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use std::f64::consts::PI;
 use std::fs::read_to_string;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use astro::{Engine, Star};
+use sdl2::event::Event;
+use sdl2::gfx::primitives::DrawRenderer;
+use sdl2::image::LoadTexture;
+use sdl2::keyboard::Keycode;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
+use sdl2::render::{Texture, TextureCreator};
 
 mod astro;
 
@@ -15,7 +19,7 @@ const CANVAS_SIZE: u32 = 960;
 
 fn read_stars(filename: &str) -> Vec<Star> {
     let mut stars = Vec::new();
-    for line in read_to_string(filename).unwrap().lines() {
+    for line in read_to_string(filename).expect("Couldn't find stars.dat").lines() {
         let mut parts = line.split_whitespace();
         let hour = parts.next().unwrap().parse::<f64>().unwrap();
         let minute = parts.next().unwrap().parse::<f64>().unwrap();
@@ -28,6 +32,18 @@ fn read_stars(filename: &str) -> Vec<Star> {
         });
     }
     stars
+}
+
+fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
+    let mut moon_phases = Vec::new();
+    for i in 0..24 {
+        moon_phases.push(
+            texture_creator
+                .load_texture(format!("moon_phases/{:02}.png", i).as_str())
+                .expect("Couldn't find textures in moon_phases/"),
+        );
+    }
+    moon_phases
 }
 
 fn get_now() -> f64 {
@@ -72,6 +88,9 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
+    let texture_creator = canvas.texture_creator();
+    let moon_phases = load_moon_phases(&texture_creator);
+
     canvas.set_draw_color(Color::RGB(12, 12, 12));
     canvas.clear();
     canvas.present();
@@ -109,9 +128,13 @@ fn main() {
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
         _ = canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255));
 
-        let (alt, az) = engine.get_moon_position();
+        let (alt, az, phase) = engine.get_moon_position();
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.filled_circle(x, y, 15, Color::RGB(127, 127, 127));
+        _ = canvas.copy(
+            &moon_phases[(phase / 2.0 / PI * 24.0).round() as usize % 24],
+            None,
+            Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
+        );
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
