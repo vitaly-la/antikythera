@@ -2,9 +2,10 @@ extern crate sdl2;
 
 use std::f64::consts::PI;
 use std::fs::read_to_string;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
-use astro::{Engine, Star};
+use astro::{Engine, Star, LAT, LON};
+use chrono::Utc;
 use sdl2::event::Event;
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::image::LoadTexture;
@@ -12,6 +13,8 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Texture, TextureCreator};
+use sdl2::ttf;
+use sdl2::ttf::Font;
 
 mod astro;
 
@@ -28,7 +31,7 @@ fn read_stars(filename: &str) -> Vec<Star> {
         stars.push(Star {
             ascension: (hour * 60.0 + minute) / 24.0 / 60.0 * 2.0 * PI,
             declination: declination / 180.0 * PI,
-            magnitude: magnitude,
+            magnitude,
         });
     }
     stars
@@ -44,11 +47,6 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
         );
     }
     moon_phases
-}
-
-fn get_now() -> f64 {
-    let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    since_the_epoch.as_secs() as f64 + since_the_epoch.subsec_nanos() as f64 * 1e-9
 }
 
 fn horizontal_to_canvas(alt: f64, az: f64, size: u32) -> (i16, i16) {
@@ -74,22 +72,40 @@ fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
     }
 }
 
-fn main() {
-    let stars = read_stars("stars.dat");
+fn render_text<'a, T>(
+    font: &'a Font<'a, 'a>,
+    texture_creator: &'a TextureCreator<T>,
+    text: &'a str,
+) -> (Texture<'a>, u32, u32) {
+    let texture = font
+        .render(text)
+        .blended(Color::RGB(0, 255, 0))
+        .unwrap()
+        .as_texture(texture_creator)
+        .unwrap();
+    let (x, y) = font.size_of(text).unwrap();
+    (texture, x, y)
+}
 
+fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("Antikythera", CANVAS_SIZE, CANVAS_SIZE)
+        .window("Antikythera", CANVAS_SIZE, CANVAS_SIZE + 50)
         .position_centered()
         .build()
         .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
 
+    let stars = read_stars("stars.dat");
     let texture_creator = canvas.texture_creator();
     let moon_phases = load_moon_phases(&texture_creator);
+    let ttf_context = ttf::init().unwrap();
+    let font = ttf_context
+        .load_font("NotoSansMono-Light.ttf", 24)
+        .expect("Couldn't find NotoSansMono-Light.ttf");
 
     canvas.set_draw_color(Color::RGB(12, 12, 12));
     canvas.clear();
@@ -112,7 +128,7 @@ fn main() {
         let size = (CANVAS_SIZE / 2).try_into().unwrap();
         _ = canvas.filled_circle(size, size, size, Color::RGB(0, 0, 0));
 
-        let engine = Engine::new(get_now());
+        let engine = Engine::new(Utc::now());
 
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
@@ -135,6 +151,17 @@ fn main() {
             None,
             Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
         );
+
+        _ = canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0));
+
+        let text = format!(
+            "lat: {:.4}; lon: {:.4}; {}",
+            LAT / PI * 180.0,
+            LON / PI * 180.0,
+            engine.time.format("%Y-%b-%d %H:%M:%S %Z")
+        );
+        let (texture, x, y) = render_text(&font, &texture_creator, &text);
+        _ = canvas.copy(&texture, None, Rect::new(10, 967, x, y));
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
