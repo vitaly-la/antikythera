@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 
+use chrono::{DateTime, Utc};
 use euclid::{vec3, Angle, Rotation3D, Vector3D};
 
 enum U {}
@@ -11,10 +12,14 @@ pub struct Star {
 }
 
 pub struct Engine {
+    pub time: DateTime<Utc>,
     ts: f64,
     normal: Vector3D<f64, U>,
     north: Vector3D<f64, U>,
 }
+
+pub const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
+pub const LON: f64 = 0.0; // greenwich
 
 const INITIAL_PHASE: f64 = 1.7247432929978155; // average from horizons
 const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // from stellarium
@@ -22,11 +27,8 @@ const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // from stellarium
 const INITIAL_DAILY_PHASE: f64 = 1.7341591447815659; // from actual solar noon
 const SIDEREAL_DAY: f64 = 23.9344694 * 60.0 * 60.0; // from stellarium
 
-const AXIAL_TILT: f64 = 23.4392803055555555556 * PI / 180.0; // from stellarium
+const AXIAL_TILT: f64 = 23.439280305555556 * PI / 180.0; // from stellarium
 const AXIAL_DIRECTION: f64 = 1.5407643946374219; // average solstice
-
-const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
-const LON: f64 = 0.0; // greenwich
 
 const INITIAL_MOON_PHASE: f64 = 3.514; // from eclipse
 const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // from stellarium
@@ -111,9 +113,15 @@ fn get_lunar_phase(to_sun: Vector3D<f64, U>, to_moon: Vector3D<f64, U>) -> f64 {
 }
 
 impl Engine {
-    pub fn new(ts: f64) -> Self {
+    pub fn new(time: DateTime<Utc>) -> Self {
+        let ts = time.timestamp() as f64;
         let (normal, north) = get_normal_and_north(ts);
-        Self { ts, normal, north }
+        Self {
+            time,
+            ts,
+            normal,
+            north,
+        }
     }
 
     pub fn get_star_position(&self, star: &Star) -> (f64, f64) {
