@@ -37,6 +37,11 @@ const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // from stellarium
 const INITIAL_NODAL_PHASE: f64 = 5.125; // from eclipse
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
+const X_UNIT: Vector3D<f64, U> = vec3(1.0, 0.0, 0.0);
+#[allow(dead_code)]
+const Y_UNIT: Vector3D<f64, U> = vec3(0.0, 1.0, 0.0);
+const Z_UNIT: Vector3D<f64, U> = vec3(0.0, 0.0, 1.0);
+
 fn rot_y(angle: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
     Rotation3D::around_y(Angle::radians(angle)).transform_vector3d(vec)
 }
@@ -66,22 +71,22 @@ fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
     let normal = to_global_coords(
         AXIAL_TILT,
         AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3(1.0, 0.0, 0.0))),
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, X_UNIT)),
     );
     let north = to_global_coords(
         AXIAL_TILT,
         AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, vec3(0.0, 0.0, 1.0))),
+        to_recent_coords(daily_phase, to_local_coords(LAT, LON, Z_UNIT)),
     );
     (normal, north)
 }
 
 fn get_sun_direction(phase: f64) -> Vector3D<f64, U> {
-    -rot_z(phase, vec3(1.0, 0.0, 0.0))
+    -rot_z(phase, X_UNIT)
 }
 
 fn get_moon_direction(moon_phase: f64) -> Vector3D<f64, U> {
-    rot_z(moon_phase, vec3(1.0, 0.0, 0.0))
+    rot_z(moon_phase, X_UNIT)
 }
 
 fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: f64) -> Vector3D<f64, U> {
@@ -105,7 +110,7 @@ fn get_azimuth(normal: Vector3D<f64, U>, north: Vector3D<f64, U>, to_object: Vec
 
 fn get_lunar_phase(to_sun: Vector3D<f64, U>, to_moon: Vector3D<f64, U>) -> f64 {
     let angle = to_sun.dot(to_moon).acos();
-    if to_sun.cross(to_moon).dot(vec3(0.0, 0.0, 1.0)) > 0.0 {
+    if to_sun.cross(to_moon).dot(Z_UNIT) > 0.0 {
         angle
     } else {
         2.0 * PI - angle
@@ -129,7 +134,7 @@ fn get_moon_angle(
         normal.dot(proj_moon_to_sun),
     );
 
-    let level = rot_z(-az, vec3(1.0, 0.0, 0.0));
+    let level = rot_z(-az, X_UNIT);
     let angle = level.dot(local_moon_to_sun).acos();
 
     let local_to_moon = vec3(east.dot(to_moon), north.dot(to_moon), normal.dot(to_moon));
@@ -162,7 +167,7 @@ impl Engine {
         let to_star = to_global_coords(
             AXIAL_TILT,
             AXIAL_DIRECTION,
-            to_local_coords(star.declination, star.ascension, vec3(1.0, 0.0, 0.0)),
+            to_local_coords(star.declination, star.ascension, X_UNIT),
         );
 
         let alt = get_altitude(self.normal, to_star);
@@ -214,108 +219,106 @@ mod tests {
 
     #[test]
     fn test_to_local_coords() {
-        let normal = vec3(1.0, 0.0, 0.0);
-        assert!((to_local_coords(0.0, 0.0, normal) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_local_coords(PI / 2.0, 0.0, normal) - vec3(0.0, 0.0, 1.0)).length() < 1e-15);
-        assert!((to_local_coords(-PI / 2.0, 0.0, normal) - vec3(0.0, 0.0, -1.0)).length() < 1e-15);
-        assert!((to_local_coords(0.0, PI / 2.0, normal) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
-        assert!((to_local_coords(0.0, PI, normal) - vec3(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_local_coords(0.0, -PI / 2.0, normal) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
+        let normal = X_UNIT;
+        assert!((to_local_coords(0.0, 0.0, normal) - X_UNIT).length() < 1e-15);
+        assert!((to_local_coords(PI / 2.0, 0.0, normal) - Z_UNIT).length() < 1e-15);
+        assert!((to_local_coords(-PI / 2.0, 0.0, normal) + Z_UNIT).length() < 1e-15);
+        assert!((to_local_coords(0.0, PI / 2.0, normal) - Y_UNIT).length() < 1e-15);
+        assert!((to_local_coords(0.0, PI, normal) + X_UNIT).length() < 1e-15);
+        assert!((to_local_coords(0.0, -PI / 2.0, normal) + Y_UNIT).length() < 1e-15);
     }
 
     #[test]
     fn test_to_recent_coords() {
-        let normal = vec3(1.0, 0.0, 0.0);
-        assert!((to_recent_coords(0.0, normal) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_recent_coords(PI / 2.0, normal) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
+        let normal = X_UNIT;
+        assert!((to_recent_coords(0.0, normal) - X_UNIT).length() < 1e-15);
+        assert!((to_recent_coords(PI / 2.0, normal) - Y_UNIT).length() < 1e-15);
     }
 
     #[test]
     fn test_to_global_coords() {
-        let axis = vec3(0.0, 0.0, 1.0);
-        assert!((to_global_coords(0.0, 0.0, axis) - vec3(0.0, 0.0, 1.0)).length() < 1e-15);
-        assert!((to_global_coords(PI / 2.0, 0.0, axis) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((to_global_coords(PI / 2.0, PI / 2.0, axis) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
-        assert!((to_global_coords(PI / 2.0, -PI / 2.0, axis) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
+        let axis = Z_UNIT;
+        assert!((to_global_coords(0.0, 0.0, axis) - Z_UNIT).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, 0.0, axis) - X_UNIT).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, PI / 2.0, axis) - Y_UNIT).length() < 1e-15);
+        assert!((to_global_coords(PI / 2.0, -PI / 2.0, axis) + Y_UNIT).length() < 1e-15);
     }
 
     #[test]
     fn test_get_sun_direction() {
-        assert!((get_sun_direction(0.0) - vec3(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(PI / 2.0) - vec3(0.0, -1.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(PI) - vec3(1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!((get_sun_direction(3.0 * PI / 2.0) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((get_sun_direction(0.0) + X_UNIT).length() < 1e-15);
+        assert!((get_sun_direction(PI / 2.0) + Y_UNIT).length() < 1e-15);
+        assert!((get_sun_direction(PI) - X_UNIT).length() < 1e-15);
+        assert!((get_sun_direction(3.0 * PI / 2.0) - Y_UNIT).length() < 1e-15);
     }
 
     #[test]
     fn test_get_moon_direction() {
-        assert!((get_moon_direction(PI / 2.0) - vec3(0.0, 1.0, 0.0)).length() < 1e-15);
+        assert!((get_moon_direction(PI / 2.0) - Y_UNIT).length() < 1e-15);
     }
 
     #[test]
     fn test_get_inclined_direction() {
-        assert!((get_inclined_direction(vec3(1.0, 0.0, 0.0), PI / 2.0, 0.0) - vec3(0.0, 0.0, 1.0)).length() < 1e-15);
-        assert!((get_inclined_direction(vec3(0.0, 0.0, 1.0), PI / 2.0, 0.0) - vec3(-1.0, 0.0, 0.0)).length() < 1e-15);
-        assert!(
-            (get_inclined_direction(vec3(0.0, 0.0, 1.0), PI / 2.0, PI / 2.0) - vec3(0.0, 1.0, 0.0)).length() < 1e-15
-        );
+        assert!((get_inclined_direction(X_UNIT, PI / 2.0, 0.0) - Z_UNIT).length() < 1e-15);
+        assert!((get_inclined_direction(Z_UNIT, PI / 2.0, 0.0) + X_UNIT).length() < 1e-15);
+        assert!((get_inclined_direction(Z_UNIT, PI / 2.0, PI / 2.0) - Y_UNIT).length() < 1e-15);
     }
 
     #[test]
     fn test_get_altitude() {
-        assert!((get_altitude(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
-        assert!((get_altitude(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0)) - 0.0).abs() < 1e-15);
-        assert!((get_altitude(vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0)) + PI / 2.0).abs() < 1e-15);
+        assert!((get_altitude(X_UNIT, X_UNIT) - PI / 2.0).abs() < 1e-15);
+        assert!((get_altitude(X_UNIT, Y_UNIT) - 0.0).abs() < 1e-15);
+        assert!((get_altitude(X_UNIT, -X_UNIT) + PI / 2.0).abs() < 1e-15);
     }
 
     #[test]
     fn test_get_azimuth() {
-        assert!((get_azimuth(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.6, 0.8)) - 2.0 * PI).abs() < 1e-15);
-        assert!((get_azimuth(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0)) - PI / 2.0).abs() < 1e-15);
+        assert!((get_azimuth(Z_UNIT, Y_UNIT, vec3(0.0, 0.6, 0.8)) - 2.0 * PI).abs() < 1e-15);
+        assert!((get_azimuth(Z_UNIT, Y_UNIT, X_UNIT) - PI / 2.0).abs() < 1e-15);
     }
 
     #[test]
     fn test_get_lunar_phase() {
-        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0)) - 2.0 * PI).abs() < 1e-15);
-        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0)) - PI / 2.0).abs() < 1e-15);
-        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0)) - PI).abs() < 1e-15);
-        assert!((get_lunar_phase(vec3(1.0, 0.0, 0.0), vec3(0.0, -1.0, 0.0)) - 3.0 * PI / 2.0).abs() < 1e-15);
+        assert!((get_lunar_phase(X_UNIT, X_UNIT) - 2.0 * PI).abs() < 1e-15);
+        assert!((get_lunar_phase(X_UNIT, Y_UNIT) - PI / 2.0).abs() < 1e-15);
+        assert!((get_lunar_phase(X_UNIT, -X_UNIT) - PI).abs() < 1e-15);
+        assert!((get_lunar_phase(X_UNIT, -Y_UNIT) - 3.0 * PI / 2.0).abs() < 1e-15);
     }
 
     #[test]
     fn test_get_moon_angle() {
-        let normal = vec3(0.0, 0.0, 1.0);
-        let north = vec3(0.0, 1.0, 0.0);
-        let to_moon = vec3(-1.0, 0.0, 0.0);
-        let to_sun = vec3(0.0, 1.0, 0.0);
+        let normal = Z_UNIT;
+        let north = Y_UNIT;
+        let to_moon = -X_UNIT;
+        let to_sun = Y_UNIT;
         assert!(
             (get_moon_angle(normal, north, to_moon, to_sun, get_azimuth(normal, north, to_moon), 0.0) - 3.0 * PI / 2.0)
                 .abs()
                 < 1e-15
         );
 
-        let normal = vec3(0.0, 0.0, 1.0);
-        let north = vec3(0.0, 1.0, 0.0);
-        let to_moon = vec3(0.0, 1.0, 0.0);
-        let to_sun = vec3(1.0, 0.0, 0.0);
+        let normal = Z_UNIT;
+        let north = Y_UNIT;
+        let to_moon = Y_UNIT;
+        let to_sun = X_UNIT;
         assert!(
             (get_moon_angle(normal, north, to_moon, to_sun, get_azimuth(normal, north, to_moon), 0.0) - PI).abs()
                 < 1e-15
         );
 
-        let normal = vec3(0.0, 0.0, 1.0);
-        let north = vec3(0.0, 1.0, 0.0);
-        let to_moon = vec3(-1.0, 0.0, 0.0);
-        let to_sun = vec3(0.0, 0.0, 1.0);
+        let normal = Z_UNIT;
+        let north = Y_UNIT;
+        let to_moon = -X_UNIT;
+        let to_sun = Z_UNIT;
         assert!(
             (get_moon_angle(normal, north, to_moon, to_sun, get_azimuth(normal, north, to_moon), 0.0) - PI).abs()
                 < 1e-15
         );
 
-        let normal = vec3(0.0, 0.0, 1.0);
-        let north = vec3(0.0, 1.0, 0.0);
-        let to_moon = vec3(-1.0, 0.0, 0.0);
-        let to_sun = vec3(0.0, 1.0, 0.0);
+        let normal = Z_UNIT;
+        let north = Y_UNIT;
+        let to_moon = -X_UNIT;
+        let to_sun = Y_UNIT;
         assert!(
             (get_moon_angle(normal, north, to_moon, to_sun, get_azimuth(normal, north, to_moon), 4.0) - PI / 2.0).abs()
                 < 1e-15
