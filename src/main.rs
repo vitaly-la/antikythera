@@ -144,12 +144,16 @@ fn main() {
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
         _ = canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255));
 
-        let (alt, az, phase) = engine.get_moon_position();
+        let (alt, az, phase, angle) = engine.get_moon_position();
         let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.copy(
+        _ = canvas.copy_ex(
             &moon_phases[(phase / 2.0 / PI * 24.0).round() as usize % 24],
             None,
             Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
+            angle / PI * 180.0,
+            None,
+            false,
+            false,
         );
 
         _ = canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0));
