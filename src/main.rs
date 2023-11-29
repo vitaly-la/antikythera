@@ -102,6 +102,9 @@ fn main() {
     let stars = read_stars("stars.dat");
     let texture_creator = canvas.texture_creator();
     let moon_phases = load_moon_phases(&texture_creator);
+    let planet = texture_creator
+        .load_texture("jupiter.png")
+        .expect("Couldn't find jupiter.png");
     let ttf_context = ttf::init().unwrap();
     let font = ttf_context
         .load_font("NotoSansMono-Light.ttf", 24)
@@ -124,7 +127,7 @@ fn main() {
                 _ => {}
             }
         }
-        // The rest of the game loop goes here...
+
         let size = (CANVAS_SIZE / 2).try_into().unwrap();
         _ = canvas.filled_circle(size, size, size, Color::RGB(0, 0, 0));
 
@@ -155,6 +158,10 @@ fn main() {
             false,
             false,
         );
+
+        let (alt, az) = engine.get_planet_position();
+        let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
+        _ = canvas.copy(&planet, None, Rect::new((x - 10).into(), (y - 10).into(), 20, 20));
 
         _ = canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0));
 

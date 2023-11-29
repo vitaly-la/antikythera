@@ -85,8 +85,8 @@ fn get_sun_direction(phase: f64) -> Vector3D<f64, U> {
     -rot_z(phase, X_UNIT)
 }
 
-fn get_moon_direction(moon_phase: f64) -> Vector3D<f64, U> {
-    rot_z(moon_phase, X_UNIT)
+fn get_object_direction(object_phase: f64) -> Vector3D<f64, U> {
+    rot_z(object_phase, X_UNIT)
 }
 
 fn get_inclined_direction(to_moon: Vector3D<f64, U>, inclination: f64, nodal_phase: f64) -> Vector3D<f64, U> {
@@ -188,7 +188,7 @@ impl Engine {
 
     pub fn get_moon_position(&self) -> (f64, f64, f64, f64) {
         let moon_phase = get_phase(self.ts, INITIAL_MOON_PHASE, SIDEREAL_MONTH);
-        let to_moon = get_moon_direction(moon_phase);
+        let to_moon = get_object_direction(moon_phase);
 
         let nodal_phase = get_phase(self.ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
         let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
@@ -202,6 +202,16 @@ impl Engine {
         let angle = get_moon_angle(self.normal, self.north, to_moon, to_sun, az, lunar_phase);
 
         (alt, az, lunar_phase, angle)
+    }
+
+    pub fn get_planet_position(&self) -> (f64, f64) {
+        let phase = get_phase(self.ts, 3.5, 4332.589 * 24.0 * 60.0 * 60.0);
+        let to_planet = get_object_direction(phase);
+
+        let alt = get_altitude(self.normal, to_planet);
+        let az = get_azimuth(self.normal, self.north, to_planet);
+
+        (alt, az)
     }
 }
 
@@ -253,8 +263,8 @@ mod tests {
     }
 
     #[test]
-    fn test_get_moon_direction() {
-        assert!((get_moon_direction(PI / 2.0) - Y_UNIT).length() < 1e-15);
+    fn test_get_object_direction() {
+        assert!((get_object_direction(PI / 2.0) - Y_UNIT).length() < 1e-15);
     }
 
     #[test]
