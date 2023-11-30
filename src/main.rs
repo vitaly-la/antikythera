@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 use std::fs::read_to_string;
 use std::time::Duration;
 
-use astro::{Engine, Star, LAT, LON};
+use astro::{Engine, LAT, LON};
 use chrono::Utc;
 use sdl2::event::Event;
 use sdl2::gfx::primitives::DrawRenderer;
@@ -17,6 +17,18 @@ use sdl2::ttf;
 use sdl2::ttf::Font;
 
 mod astro;
+
+pub struct Star {
+    pub ascension: f64,
+    pub declination: f64,
+    pub magnitude: f64,
+}
+
+struct Planet<'a> {
+    sidereal: f64,
+    phase: f64,
+    texture: Option<Texture<'a>>,
+}
 
 const CANVAS_SIZE: u32 = 960;
 
@@ -35,6 +47,29 @@ fn read_stars(filename: &str) -> Vec<Star> {
         });
     }
     stars
+}
+
+fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str) -> Vec<Planet<'a>> {
+    let mut planets = Vec::new();
+    for line in read_to_string(filename).expect("Couldn't find planets.dat").lines() {
+        let mut parts = line.split_whitespace();
+        let sidereal = parts.next().unwrap().parse::<f64>().unwrap();
+        let phase = parts.next().unwrap().parse::<f64>().unwrap();
+        let texture = parts.next().unwrap();
+        planets.push(Planet {
+            sidereal,
+            phase,
+            texture: match texture {
+                "null" => None,
+                _ => Some(
+                    texture_creator
+                        .load_texture(texture)
+                        .unwrap_or_else(|_| panic!("Couldn't find {}", texture)),
+                ),
+            },
+        });
+    }
+    planets
 }
 
 fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
@@ -102,9 +137,7 @@ fn main() {
     let stars = read_stars("stars.dat");
     let texture_creator = canvas.texture_creator();
     let moon_phases = load_moon_phases(&texture_creator);
-    let planet = texture_creator
-        .load_texture("jupiter.png")
-        .expect("Couldn't find jupiter.png");
+    let planets = read_planets(&texture_creator, "planets.dat");
     let ttf_context = ttf::init().unwrap();
     let font = ttf_context
         .load_font("NotoSansMono-Light.ttf", 24)
@@ -159,9 +192,18 @@ fn main() {
             false,
         );
 
-        let (alt, az) = engine.get_planet_position();
-        let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.copy(&planet, None, Rect::new((x - 10).into(), (y - 10).into(), 20, 20));
+        for planet in &planets {
+            let (alt, az) = engine.get_planet_position(planet);
+            let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
+            _ = match planet.texture {
+                Some(_) => canvas.copy(
+                    planet.texture.as_ref().unwrap(),
+                    None,
+                    Rect::new((x - 10).into(), (y - 10).into(), 20, 20),
+                ),
+                None => canvas.filled_circle(x, y, 10, Color::RGB(255, 0, 0)),
+            }
+        }
 
         _ = canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0));
 

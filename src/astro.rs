@@ -3,13 +3,9 @@ use std::f64::consts::PI;
 use chrono::{DateTime, Utc};
 use euclid::{vec3, Angle, Rotation3D, Vector3D};
 
-enum U {}
+use crate::{Planet, Star};
 
-pub struct Star {
-    pub ascension: f64,
-    pub declination: f64,
-    pub magnitude: f64,
-}
+enum U {}
 
 pub struct Engine {
     pub time: DateTime<Utc>,
@@ -204,8 +200,8 @@ impl Engine {
         (alt, az, lunar_phase, angle)
     }
 
-    pub fn get_planet_position(&self) -> (f64, f64) {
-        let phase = get_phase(self.ts, 3.5, 4332.589 * 24.0 * 60.0 * 60.0);
+    pub fn get_planet_position(&self, planet: &Planet) -> (f64, f64) {
+        let phase = get_phase(self.ts, planet.phase, planet.sidereal);
         let to_planet = get_object_direction(phase);
 
         let alt = get_altitude(self.normal, to_planet);
