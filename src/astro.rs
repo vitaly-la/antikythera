@@ -18,19 +18,20 @@ pub const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
 pub const LON: f64 = 0.0; // greenwich
 
 const INITIAL_PHASE: f64 = 1.7247432929978155; // average from horizons
-const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // from stellarium
+const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // stellarium
+const SEMIMAJOR: f64 = 149.598; // nssdc.gsfc.nasa.gov
 
-const INITIAL_DAILY_PHASE: f64 = 1.7341591447815659; // from actual solar noon
-const SIDEREAL_DAY: f64 = 23.9344694 * 60.0 * 60.0; // from stellarium
+const INITIAL_DAILY_PHASE: f64 = 1.7341591447815659; // actual solar noon
+const SIDEREAL_DAY: f64 = 23.9344694 * 60.0 * 60.0; // stellarium
 
-const AXIAL_TILT: f64 = 23.439280305555556 * PI / 180.0; // from stellarium
+const AXIAL_TILT: f64 = 23.439280305555556 * PI / 180.0; // stellarium
 const AXIAL_DIRECTION: f64 = 1.5407643946374219; // average solstice
 
-const INITIAL_MOON_PHASE: f64 = 3.514; // from eclipse
-const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // from stellarium
+const INITIAL_MOON_PHASE: f64 = 3.514; // eclipse
+const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // stellarium
 
-const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // from stellarium
-const INITIAL_NODAL_PHASE: f64 = 5.125; // from eclipse
+const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // stellarium
+const INITIAL_NODAL_PHASE: f64 = 5.125; // eclipse
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
 const X_UNIT: Vector3D<f64, U> = vec3(1.0, 0.0, 0.0);
@@ -201,11 +202,16 @@ impl Engine {
     }
 
     pub fn get_planet_position(&self, planet: &Planet) -> (f64, f64) {
+        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
+        let to_earth = get_object_direction(phase);
+
         let phase = get_phase(self.ts, planet.phase, planet.sidereal);
         let to_planet = get_object_direction(phase);
 
-        let alt = get_altitude(self.normal, to_planet);
-        let az = get_azimuth(self.normal, self.north, to_planet);
+        let earth_to_planet = (to_planet * planet.semimajor - to_earth * SEMIMAJOR).normalize();
+
+        let alt = get_altitude(self.normal, earth_to_planet);
+        let az = get_azimuth(self.normal, self.north, earth_to_planet);
 
         (alt, az)
     }

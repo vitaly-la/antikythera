@@ -25,6 +25,7 @@ pub struct Star {
 }
 
 struct Planet<'a> {
+    semimajor: f64,
     sidereal: f64,
     phase: f64,
     texture: Option<Texture<'a>>,
@@ -53,10 +54,12 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
     let mut planets = Vec::new();
     for line in read_to_string(filename).expect("Couldn't find planets.dat").lines() {
         let mut parts = line.split_whitespace();
+        let semimajor = parts.next().unwrap().parse::<f64>().unwrap();
         let sidereal = parts.next().unwrap().parse::<f64>().unwrap();
         let phase = parts.next().unwrap().parse::<f64>().unwrap();
         let texture = parts.next().unwrap();
         planets.push(Planet {
+            semimajor,
             sidereal,
             phase,
             texture: match texture {
@@ -201,7 +204,7 @@ fn main() {
                     None,
                     Rect::new((x - 10).into(), (y - 10).into(), 20, 20),
                 ),
-                None => canvas.filled_circle(x, y, 10, Color::RGB(255, 0, 0)),
+                None => canvas.filled_circle(x, y, 7, Color::RGB(255, 255, 191)),
             }
         }
 
