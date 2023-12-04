@@ -13,23 +13,29 @@ use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::{Texture, TextureCreator};
+use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::ttf;
 use sdl2::ttf::Font;
+use sdl2::video::Window;
 
 mod astro;
 
 pub struct Star {
+    name: Option<String>,
     pub ascension: f64,
     pub declination: f64,
     pub magnitude: f64,
 }
 
 struct Planet<'a> {
+    name: String,
     semimajor: f64,
     sidereal: f64,
     phase: f64,
     texture: Option<Texture<'a>>,
+    r: u8,
+    g: u8,
+    b: u8,
 }
 
 const INITIAL_SIZE: u32 = 960;
@@ -43,7 +49,13 @@ fn read_stars(filename: &str) -> Vec<Star> {
         let minute = parts.next().unwrap().parse::<f64>().unwrap();
         let declination = parts.next().unwrap().parse::<f64>().unwrap();
         let magnitude = parts.next().unwrap().parse::<f64>().unwrap();
+        let name = parts.next().unwrap();
+        let name = match name {
+            "null" => None,
+            _ => Some(name.to_string()),
+        };
         stars.push(Star {
+            name,
             ascension: (hour * 60.0 + minute) / 24.0 / 60.0 * 2.0 * PI,
             declination: declination / 180.0 * PI,
             magnitude,
@@ -56,11 +68,16 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
     let mut planets = Vec::new();
     for line in read_to_string(filename).expect("Couldn't find planets.dat").lines() {
         let mut parts = line.split_whitespace();
+        let name = parts.next().unwrap().to_string();
         let semimajor = parts.next().unwrap().parse::<f64>().unwrap();
         let sidereal = parts.next().unwrap().parse::<f64>().unwrap();
         let phase = parts.next().unwrap().parse::<f64>().unwrap();
         let texture = parts.next().unwrap();
+        let r = parts.next().unwrap().parse::<u8>().unwrap();
+        let g = parts.next().unwrap().parse::<u8>().unwrap();
+        let b = parts.next().unwrap().parse::<u8>().unwrap();
         planets.push(Planet {
+            name,
             semimajor,
             sidereal,
             phase,
@@ -72,6 +89,9 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
                         .unwrap_or_else(|_| panic!("Couldn't find {}", texture)),
                 ),
             },
+            r,
+            g,
+            b,
         });
     }
     planets
@@ -128,6 +148,28 @@ fn render_text<'a, T>(
     (texture, x, y)
 }
 
+trait Astro {
+    fn text(&mut self, text: &str, font: &Font, x: i16, y: i16, obj_size: i16);
+}
+
+impl Astro for Canvas<Window> {
+    fn text(&mut self, text: &str, font: &Font, x: i16, y: i16, obj_size: i16) {
+        let texture_creator = self.texture_creator();
+        let (texture, xsize, ysize) = render_text(font, &texture_creator, text);
+        self.copy(
+            &texture,
+            None,
+            Rect::new(
+                (x - i16::try_from(xsize / 2).unwrap()).into(),
+                (y - obj_size - i16::try_from(ysize).unwrap()).into(),
+                xsize,
+                ysize,
+            ),
+        )
+        .unwrap();
+    }
+}
+
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -148,6 +190,9 @@ fn main() {
     let ttf_context = ttf::init().unwrap();
     let font = ttf_context
         .load_font("NotoSansMono-Light.ttf", 20)
+        .expect("Couldn't find NotoSansMono-Light.ttf");
+    let small_font = ttf_context
+        .load_font("NotoSansMono-Light.ttf", 14)
         .expect("Couldn't find NotoSansMono-Light.ttf");
 
     canvas
@@ -201,11 +246,15 @@ fn main() {
                     .filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness))
                     .unwrap(),
             }
+            if let Some(name) = &star.name {
+                canvas.text(name, &small_font, x, y, 5)
+            }
         }
 
         let (alt, az) = engine.get_sun_position();
         let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
         canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255)).unwrap();
+        canvas.text("Sun", &small_font, x, y, 15);
 
         let (alt, az, phase, angle) = engine.get_moon_position();
         let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
@@ -220,6 +269,7 @@ fn main() {
                 false,
             )
             .unwrap();
+        canvas.text("Moon", &small_font, x, y, 15);
 
         for planet in &planets {
             let (alt, az) = engine.get_planet_position(planet);
@@ -232,8 +282,11 @@ fn main() {
                         Rect::new((x - 10).into(), (y - 10).into(), 20, 20),
                     )
                     .unwrap(),
-                None => canvas.filled_circle(x, y, 7, Color::RGB(255, 255, 191)).unwrap(),
+                None => canvas
+                    .filled_circle(x, y, 7, Color::RGB(planet.r, planet.g, planet.b))
+                    .unwrap(),
             }
+            canvas.text(&planet.name, &small_font, x, y, 10);
         }
 
         let (width, height) = canvas.logical_size();
