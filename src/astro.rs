@@ -266,6 +266,7 @@ mod tests {
 
     #[test]
     fn test_get_object_direction() {
+        assert!((get_object_direction(0.0) - X_UNIT).length() < 1e-15);
         assert!((get_object_direction(PI / 2.0) - Y_UNIT).length() < 1e-15);
     }
 

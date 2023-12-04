@@ -1,12 +1,13 @@
 extern crate sdl2;
 
+use std::cmp::min;
 use std::f64::consts::PI;
 use std::fs::read_to_string;
 use std::time::Duration;
 
 use astro::{Engine, LAT, LON};
 use chrono::Utc;
-use sdl2::event::Event;
+use sdl2::event::{Event, WindowEvent};
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
@@ -31,7 +32,7 @@ struct Planet<'a> {
     texture: Option<Texture<'a>>,
 }
 
-const CANVAS_SIZE: u32 = 960;
+const INITIAL_SIZE: u32 = 960;
 
 fn read_stars(filename: &str) -> Vec<Star> {
     let mut stars = Vec::new();
@@ -87,10 +88,11 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
     moon_phases
 }
 
-fn horizontal_to_canvas(alt: f64, az: f64, size: u32) -> (i16, i16) {
+fn horizontal_to_canvas(alt: f64, az: f64, size: (u32, u32)) -> (i16, i16) {
     let r = 1.0 - alt * 2.0 / PI;
-    let x = i16::try_from(size).unwrap() / 2 - (size as f64 / 2.0 * r * az.sin()).round() as i16;
-    let y = i16::try_from(size).unwrap() / 2 - (size as f64 / 2.0 * r * az.cos()).round() as i16;
+    let msize = min(size.0, size.1);
+    let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * r * az.sin()).round() as i16;
+    let y = i16::try_from(size.1).unwrap() / 2 - (msize as f64 / 2.0 * r * az.cos()).round() as i16;
     (x, y)
 }
 
@@ -130,7 +132,8 @@ fn main() {
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("Antikythera", CANVAS_SIZE, CANVAS_SIZE + 50)
+        .window("Antikythera", INITIAL_SIZE, INITIAL_SIZE + 50)
+        .resizable()
         .position_centered()
         .build()
         .unwrap();
@@ -146,6 +149,7 @@ fn main() {
         .load_font("NotoSansMono-Light.ttf", 24)
         .expect("Couldn't find NotoSansMono-Light.ttf");
 
+    canvas.set_logical_size(INITIAL_SIZE, INITIAL_SIZE + 50).unwrap();
     canvas.set_draw_color(Color::RGB(12, 12, 12));
     canvas.clear();
     canvas.present();
@@ -155,6 +159,12 @@ fn main() {
         canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
+                Event::Window {
+                    win_event: WindowEvent::Resized(width, height),
+                    ..
+                } => {
+                    canvas.set_logical_size(width as u32, height as u32).unwrap();
+                }
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
@@ -164,51 +174,66 @@ fn main() {
             }
         }
 
-        let size = (CANVAS_SIZE / 2).try_into().unwrap();
-        _ = canvas.filled_circle(size, size, size, Color::RGB(0, 0, 0));
-
         let engine = Engine::new(Utc::now());
+
+        let (width, height) = canvas.logical_size();
+        canvas
+            .filled_circle(
+                (width / 2).try_into().unwrap(),
+                (height / 2).try_into().unwrap(),
+                (min(width, height) / 2).try_into().unwrap(),
+                Color::RGB(0, 0, 0),
+            )
+            .unwrap();
 
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
-            let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
+            let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
             let (size, brightness) = magnitude_to_size_and_brightness(star.magnitude);
-            _ = match size {
-                0 => canvas.pixel(x, y, Color::RGB(brightness, brightness, brightness)),
-                _ => canvas.filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness)),
+            match size {
+                0 => canvas
+                    .pixel(x, y, Color::RGB(brightness, brightness, brightness))
+                    .unwrap(),
+                _ => canvas
+                    .filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness))
+                    .unwrap(),
             }
         }
 
         let (alt, az) = engine.get_sun_position();
-        let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255));
+        let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
+        canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255)).unwrap();
 
         let (alt, az, phase, angle) = engine.get_moon_position();
-        let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-        _ = canvas.copy_ex(
-            &moon_phases[(phase / 2.0 / PI * 24.0).round() as usize % 24],
-            None,
-            Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
-            angle / PI * 180.0,
-            None,
-            false,
-            false,
-        );
+        let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
+        canvas
+            .copy_ex(
+                &moon_phases[(phase / 2.0 / PI * 24.0).round() as usize % 24],
+                None,
+                Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
+                angle / PI * 180.0,
+                None,
+                false,
+                false,
+            )
+            .unwrap();
 
         for planet in &planets {
             let (alt, az) = engine.get_planet_position(planet);
-            let (x, y) = horizontal_to_canvas(alt, az, CANVAS_SIZE);
-            _ = match planet.texture {
-                Some(_) => canvas.copy(
-                    planet.texture.as_ref().unwrap(),
-                    None,
-                    Rect::new((x - 10).into(), (y - 10).into(), 20, 20),
-                ),
-                None => canvas.filled_circle(x, y, 7, Color::RGB(255, 255, 191)),
+            let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
+            match planet.texture {
+                Some(_) => canvas
+                    .copy(
+                        planet.texture.as_ref().unwrap(),
+                        None,
+                        Rect::new((x - 10).into(), (y - 10).into(), 20, 20),
+                    )
+                    .unwrap(),
+                None => canvas.filled_circle(x, y, 7, Color::RGB(255, 255, 191)).unwrap(),
             }
         }
 
-        _ = canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0));
+        canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0)).unwrap();
 
         let text = format!(
             "lat: {:.4}; lon: {:.4}; {}",
@@ -217,7 +242,7 @@ fn main() {
             engine.time.format("%Y-%b-%d %H:%M:%S %Z")
         );
         let (texture, x, y) = render_text(&font, &texture_creator, &text);
-        _ = canvas.copy(&texture, None, Rect::new(10, 967, x, y));
+        canvas.copy(&texture, None, Rect::new(10, 967, x, y)).unwrap();
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
