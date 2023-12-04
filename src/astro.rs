@@ -14,9 +14,6 @@ pub struct Engine {
     north: Vector3D<f64, U>,
 }
 
-pub const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
-pub const LON: f64 = 0.0; // greenwich
-
 const INITIAL_PHASE: f64 = 1.7247432929978155; // average from horizons
 const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // stellarium
 const SEMIMAJOR: f64 = 149.598; // nssdc.gsfc.nasa.gov
@@ -34,9 +31,10 @@ const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // stellarium
 const INITIAL_NODAL_PHASE: f64 = 5.125; // eclipse
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
+pub const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
+pub const LON: f64 = 0.0; // greenwich
+
 const X_UNIT: Vector3D<f64, U> = vec3(1.0, 0.0, 0.0);
-#[allow(dead_code)]
-const Y_UNIT: Vector3D<f64, U> = vec3(0.0, 1.0, 0.0);
 const Z_UNIT: Vector3D<f64, U> = vec3(0.0, 0.0, 1.0);
 
 fn rot_y(angle: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
@@ -220,6 +218,8 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const Y_UNIT: Vector3D<f64, U> = vec3(0.0, 1.0, 0.0);
 
     #[test]
     fn test_get_phase() {

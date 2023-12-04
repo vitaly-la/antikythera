@@ -20,7 +20,7 @@ use sdl2::video::Window;
 
 mod astro;
 
-pub struct Star {
+struct Star {
     name: Option<String>,
     pub ascension: f64,
     pub declination: f64,
@@ -38,8 +38,59 @@ struct Planet<'a> {
     b: u8,
 }
 
+struct Step {
+    name: &'static str,
+    value: i32,
+}
+
 const INITIAL_SIZE: u32 = 960;
 const PANEL_SIZE: u32 = 30;
+const STEPS: [Step; 11] = [
+    Step {
+        name: "-1 month",
+        value: -2360584,
+    },
+    Step {
+        name: "-1 day",
+        value: -86164,
+    },
+    Step {
+        name: "-6 hours",
+        value: -21600,
+    },
+    Step {
+        name: "-1 hour",
+        value: -3600,
+    },
+    Step {
+        name: "-10 minutes",
+        value: -600,
+    },
+    Step {
+        name: "1 second",
+        value: 1,
+    },
+    Step {
+        name: "10 minutes",
+        value: 600,
+    },
+    Step {
+        name: "1 hour",
+        value: 3600,
+    },
+    Step {
+        name: "6 hours",
+        value: 21600,
+    },
+    Step {
+        name: "1 day",
+        value: 86164,
+    },
+    Step {
+        name: "1 month",
+        value: 2360584,
+    },
+];
 
 fn read_stars(filename: &str) -> Vec<Star> {
     let mut stars = Vec::new();
@@ -202,6 +253,11 @@ fn main() {
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
+
+    let mut real_time = Utc::now();
+    let mut current_time = real_time;
+    let mut step = 5;
+
     'running: loop {
         canvas.set_draw_color(Color::RGB(12, 12, 12));
         canvas.clear();
@@ -218,11 +274,26 @@ fn main() {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(keycode), ..
+                } => match keycode {
+                    Keycode::Left => {
+                        step = if step > 0 { step - 1 } else { step };
+                    }
+                    Keycode::Right => {
+                        step = if step < STEPS.len() - 1 { step + 1 } else { step };
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }
 
-        let engine = Engine::new(Utc::now());
+        let now = Utc::now();
+        let elapsed = now - real_time;
+        real_time = now;
+        current_time += elapsed * STEPS[step].value;
+        let engine = Engine::new(current_time);
 
         let (width, height) = canvas.logical_size();
         let radius = min(width, height - PANEL_SIZE) / 2;
@@ -239,7 +310,7 @@ fn main() {
             "E",
             &font,
             (width / 2 - radius + 10).try_into().unwrap(),
-            (height / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2).try_into().unwrap(),
             0,
         );
         canvas.text(
@@ -253,7 +324,7 @@ fn main() {
             "W",
             &font,
             (width / 2 + radius - 10).try_into().unwrap(),
-            (height / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2).try_into().unwrap(),
             0,
         );
 
@@ -279,21 +350,6 @@ fn main() {
         canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255)).unwrap();
         canvas.text("Sun", &small_font, x, y, 15);
 
-        let (alt, az, phase, angle) = engine.get_moon_position();
-        let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
-        canvas
-            .copy_ex(
-                &moon_phases[(phase / 2.0 / PI * 24.0).round() as usize % 24],
-                None,
-                Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
-                angle / PI * 180.0,
-                None,
-                false,
-                false,
-            )
-            .unwrap();
-        canvas.text("Moon", &small_font, x, y, 15);
-
         for planet in &planets {
             let (alt, az) = engine.get_planet_position(planet);
             let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
@@ -312,6 +368,21 @@ fn main() {
             canvas.text(&planet.name, &small_font, x, y, 10);
         }
 
+        let (alt, az, phase, angle) = engine.get_moon_position();
+        let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
+        canvas
+            .copy_ex(
+                &moon_phases[(phase / 2.0 / PI * 24.0).round() as usize % 24],
+                None,
+                Rect::new((x - 15).into(), (y - 15).into(), 30, 30),
+                angle / PI * 180.0,
+                None,
+                false,
+                false,
+            )
+            .unwrap();
+        canvas.text("Moon", &small_font, x, y, 15);
+
         let (width, height) = canvas.logical_size();
         canvas
             .box_(
@@ -324,10 +395,11 @@ fn main() {
             .unwrap();
 
         let text = format!(
-            "lat: {:.4}; lon: {:.4}; {}",
+            "lat: {:.4}; lon: {:.4}; {}; Speed: {}",
             LAT / PI * 180.0,
             LON / PI * 180.0,
-            engine.time.format("%Y-%b-%d %H:%M:%S %Z")
+            engine.time.format("%Y-%b-%d %H:%M:%S %Z"),
+            STEPS[step].name
         );
         let (texture, x, y) = render_text(&font, &texture_creator, &text);
         canvas
