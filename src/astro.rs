@@ -31,9 +31,6 @@ const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // stellarium
 const INITIAL_NODAL_PHASE: f64 = 5.125; // eclipse
 const NODAL_PERIOD: f64 = 18.6 * 365.0 * 24.0 * 60.0 * 60.0;
 
-pub const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
-pub const LON: f64 = 0.0; // greenwich
-
 const X_UNIT: Vector3D<f64, U> = vec3(1.0, 0.0, 0.0);
 const Z_UNIT: Vector3D<f64, U> = vec3(0.0, 0.0, 1.0);
 
@@ -61,17 +58,17 @@ fn to_global_coords(axial_tilt: f64, axial_direction: f64, vec: Vector3D<f64, U>
     rot_z(axial_direction, rot_y(axial_tilt, rot_z(-axial_direction, vec)))
 }
 
-fn get_normal_and_north(ts: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
+fn get_normal_and_north(ts: f64, latitude: f64, longitude: f64) -> (Vector3D<f64, U>, Vector3D<f64, U>) {
     let daily_phase = get_phase(ts, INITIAL_DAILY_PHASE, SIDEREAL_DAY);
     let normal = to_global_coords(
         AXIAL_TILT,
         AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, X_UNIT)),
+        to_recent_coords(daily_phase, to_local_coords(latitude, longitude, X_UNIT)),
     );
     let north = to_global_coords(
         AXIAL_TILT,
         AXIAL_DIRECTION,
-        to_recent_coords(daily_phase, to_local_coords(LAT, LON, Z_UNIT)),
+        to_recent_coords(daily_phase, to_local_coords(latitude, longitude, Z_UNIT)),
     );
     (normal, north)
 }
@@ -147,9 +144,9 @@ fn get_moon_angle(
 }
 
 impl Engine {
-    pub fn new(time: DateTime<Utc>) -> Self {
+    pub fn new(time: DateTime<Utc>, latitude: f64, longitude: f64) -> Self {
         let ts = time.timestamp() as f64;
-        let (normal, north) = get_normal_and_north(ts);
+        let (normal, north) = get_normal_and_north(ts, latitude, longitude);
         Self {
             time,
             ts,
