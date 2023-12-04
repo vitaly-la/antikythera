@@ -33,6 +33,7 @@ struct Planet<'a> {
 }
 
 const INITIAL_SIZE: u32 = 960;
+const PANEL_SIZE: u32 = 30;
 
 fn read_stars(filename: &str) -> Vec<Star> {
     let mut stars = Vec::new();
@@ -90,9 +91,9 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
 
 fn horizontal_to_canvas(alt: f64, az: f64, size: (u32, u32)) -> (i16, i16) {
     let r = 1.0 - alt * 2.0 / PI;
-    let msize = min(size.0, size.1);
+    let msize = min(size.0, size.1 - PANEL_SIZE);
     let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * r * az.sin()).round() as i16;
-    let y = i16::try_from(size.1).unwrap() / 2 - (msize as f64 / 2.0 * r * az.cos()).round() as i16;
+    let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * r * az.cos()).round() as i16;
     (x, y)
 }
 
@@ -132,7 +133,7 @@ fn main() {
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("Antikythera", INITIAL_SIZE, INITIAL_SIZE + 50)
+        .window("Antikythera", INITIAL_SIZE, INITIAL_SIZE + PANEL_SIZE)
         .resizable()
         .position_centered()
         .build()
@@ -146,10 +147,12 @@ fn main() {
     let planets = read_planets(&texture_creator, "planets.dat");
     let ttf_context = ttf::init().unwrap();
     let font = ttf_context
-        .load_font("NotoSansMono-Light.ttf", 24)
+        .load_font("NotoSansMono-Light.ttf", 20)
         .expect("Couldn't find NotoSansMono-Light.ttf");
 
-    canvas.set_logical_size(INITIAL_SIZE, INITIAL_SIZE + 50).unwrap();
+    canvas
+        .set_logical_size(INITIAL_SIZE, INITIAL_SIZE + PANEL_SIZE)
+        .unwrap();
     canvas.set_draw_color(Color::RGB(12, 12, 12));
     canvas.clear();
     canvas.present();
@@ -180,8 +183,8 @@ fn main() {
         canvas
             .filled_circle(
                 (width / 2).try_into().unwrap(),
-                (height / 2).try_into().unwrap(),
-                (min(width, height) / 2).try_into().unwrap(),
+                ((height - PANEL_SIZE) / 2).try_into().unwrap(),
+                (min(width, height - PANEL_SIZE) / 2).try_into().unwrap(),
                 Color::RGB(0, 0, 0),
             )
             .unwrap();
@@ -233,7 +236,16 @@ fn main() {
             }
         }
 
-        canvas.box_(0, 960, 960, 1060, Color::RGB(0, 0, 0)).unwrap();
+        let (width, height) = canvas.logical_size();
+        canvas
+            .box_(
+                0,
+                (height - PANEL_SIZE).try_into().unwrap(),
+                width.try_into().unwrap(),
+                height.try_into().unwrap(),
+                Color::RGB(0, 0, 0),
+            )
+            .unwrap();
 
         let text = format!(
             "lat: {:.4}; lon: {:.4}; {}",
@@ -242,7 +254,13 @@ fn main() {
             engine.time.format("%Y-%b-%d %H:%M:%S %Z")
         );
         let (texture, x, y) = render_text(&font, &texture_creator, &text);
-        canvas.copy(&texture, None, Rect::new(10, 967, x, y)).unwrap();
+        canvas
+            .copy(
+                &texture,
+                None,
+                Rect::new(10, (height - PANEL_SIZE).try_into().unwrap(), x, y),
+            )
+            .unwrap();
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
@@ -255,17 +273,17 @@ mod tests {
 
     #[test]
     fn test_horizontal_to_canvas() {
-        assert_eq!(horizontal_to_canvas(PI / 2.0, 0.0, 640), (320, 320));
-        assert_eq!(horizontal_to_canvas(PI / 2.0, PI / 2.0, 640), (320, 320));
-        assert_eq!(horizontal_to_canvas(PI / 2.0, PI, 640), (320, 320));
-        assert_eq!(horizontal_to_canvas(PI / 2.0, 3.0 * PI / 2.0, 640), (320, 320));
+        assert_eq!(horizontal_to_canvas(PI / 2.0, 0.0, (640, 670)), (320, 320));
+        assert_eq!(horizontal_to_canvas(PI / 2.0, PI / 2.0, (640, 670)), (320, 320));
+        assert_eq!(horizontal_to_canvas(PI / 2.0, PI, (640, 670)), (320, 320));
+        assert_eq!(horizontal_to_canvas(PI / 2.0, 3.0 * PI / 2.0, (640, 670)), (320, 320));
 
-        assert_eq!(horizontal_to_canvas(0.0, 0.0, 640), (320, 0));
-        assert_eq!(horizontal_to_canvas(0.0, PI / 2.0, 640), (0, 320));
-        assert_eq!(horizontal_to_canvas(0.0, PI, 640), (320, 640));
-        assert_eq!(horizontal_to_canvas(0.0, 3.0 * PI / 2.0, 640), (640, 320));
+        assert_eq!(horizontal_to_canvas(0.0, 0.0, (640, 670)), (320, 0));
+        assert_eq!(horizontal_to_canvas(0.0, PI / 2.0, (640, 670)), (0, 320));
+        assert_eq!(horizontal_to_canvas(0.0, PI, (640, 670)), (320, 640));
+        assert_eq!(horizontal_to_canvas(0.0, 3.0 * PI / 2.0, (640, 670)), (640, 320));
 
-        assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, 640), (320, -320));
+        assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, (640, 670)), (320, -320));
     }
 
     #[test]
