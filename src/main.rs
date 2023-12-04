@@ -5,7 +5,7 @@ use std::f64::consts::PI;
 use std::fs::read_to_string;
 use std::time::Duration;
 
-use astro::{Engine, LAT, LON};
+use astro::Engine;
 use chrono::Utc;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::gfx::primitives::DrawRenderer;
@@ -43,6 +43,14 @@ struct Step {
     value: i32,
 }
 
+enum Mode {
+    Default,
+    SetLatitude,
+    SetLongitude,
+}
+
+const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
+const LON: f64 = 0.0; // greenwich
 const INITIAL_SIZE: u32 = 960;
 const PANEL_SIZE: u32 = 30;
 const STEPS: [Step; 11] = [
@@ -257,6 +265,10 @@ fn main() {
     let mut real_time = Utc::now();
     let mut current_time = real_time;
     let mut step = 5;
+    let mut mode = Mode::Default;
+    let mut latitude = LAT;
+    let mut longitude = LON;
+    let mut buffer = String::new();
 
     'running: loop {
         canvas.set_draw_color(Color::RGB(12, 12, 12));
@@ -269,21 +281,61 @@ fn main() {
                 } => {
                     canvas.set_logical_size(width as u32, height as u32).unwrap();
                 }
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
+                Event::Quit { .. } => break 'running,
                 Event::KeyDown {
                     keycode: Some(keycode), ..
-                } => match keycode {
-                    Keycode::Left => {
-                        step = if step > 0 { step - 1 } else { step };
-                    }
-                    Keycode::Right => {
-                        step = if step < STEPS.len() - 1 { step + 1 } else { step };
-                    }
-                    _ => {}
+                } => match mode {
+                    Mode::Default => match keycode {
+                        Keycode::Left => {
+                            step = if step > 0 { step - 1 } else { step };
+                        }
+                        Keycode::Right => {
+                            step = if step < STEPS.len() - 1 { step + 1 } else { step };
+                        }
+                        Keycode::A => {
+                            mode = Mode::SetLatitude;
+                            buffer = String::new();
+                        }
+                        Keycode::O => {
+                            mode = Mode::SetLongitude;
+                            buffer = String::new();
+                        }
+                        _ => {}
+                    },
+                    Mode::SetLatitude => match keycode {
+                        Keycode::Return => {
+                            if let Ok(new_latitude) = buffer.parse::<f64>() {
+                                if (-90.0..=90.0).contains(&new_latitude) {
+                                    latitude = new_latitude / 180.0 * PI
+                                }
+                            }
+                            mode = Mode::Default;
+                        }
+                        Keycode::Escape => {
+                            buffer = String::new();
+                            mode = Mode::Default;
+                        }
+                        _ => {
+                            buffer.push_str(&keycode.to_string());
+                        }
+                    },
+                    Mode::SetLongitude => match keycode {
+                        Keycode::Return => {
+                            if let Ok(new_longitude) = buffer.parse::<f64>() {
+                                if (0.0..=360.0).contains(&new_longitude) {
+                                    longitude = new_longitude / 180.0 * PI
+                                }
+                            }
+                            mode = Mode::Default;
+                        }
+                        Keycode::Escape => {
+                            buffer = String::new();
+                            mode = Mode::Default;
+                        }
+                        _ => {
+                            buffer.push_str(&keycode.to_string());
+                        }
+                    },
                 },
                 _ => {}
             }
@@ -293,7 +345,7 @@ fn main() {
         let elapsed = now - real_time;
         real_time = now;
         current_time += elapsed * STEPS[step].value;
-        let engine = Engine::new(current_time);
+        let engine = Engine::new(current_time, latitude, longitude);
 
         let (width, height) = canvas.logical_size();
         let radius = min(width, height - PANEL_SIZE) / 2;
@@ -394,13 +446,23 @@ fn main() {
             )
             .unwrap();
 
-        let text = format!(
-            "lat: {:.4}; lon: {:.4}; {}; Speed: {}",
-            LAT / PI * 180.0,
-            LON / PI * 180.0,
-            engine.time.format("%Y-%b-%d %H:%M:%S %Z"),
-            STEPS[step].name
-        );
+        let text = match mode {
+            Mode::Default => {
+                format!(
+                    "lat: {:.4}; lon: {:.4}; {}; Speed: {}",
+                    latitude / PI * 180.0,
+                    longitude / PI * 180.0,
+                    engine.time.format("%Y-%b-%d %H:%M:%S %Z"),
+                    STEPS[step].name
+                )
+            }
+            Mode::SetLatitude => {
+                format!("Set latitude: {}", buffer)
+            }
+            Mode::SetLongitude => {
+                format!("Set longitude: {}", buffer)
+            }
+        };
         let (texture, x, y) = render_text(&font, &texture_creator, &text);
         canvas
             .copy(
