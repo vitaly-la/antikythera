@@ -357,26 +357,32 @@ fn main() {
                 Color::RGB(0, 0, 0),
             )
             .unwrap();
-        canvas.text("N", &font, (width / 2).try_into().unwrap(), 30, 0);
+        canvas.text(
+            "N",
+            &font,
+            (width / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 - radius + 25).try_into().unwrap(),
+            0,
+        );
         canvas.text(
             "E",
             &font,
             (width / 2 - radius + 10).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
             0,
         );
         canvas.text(
             "S",
             &font,
             (width / 2).try_into().unwrap(),
-            (height - 30).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + radius).try_into().unwrap(),
             0,
         );
         canvas.text(
             "W",
             &font,
             (width / 2 + radius - 10).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
             0,
         );
 
