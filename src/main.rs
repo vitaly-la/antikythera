@@ -280,7 +280,7 @@ fn main() {
                     ..
                 } => {
                     canvas.set_logical_size(width as u32, height as u32).unwrap();
-                }
+                },
                 Event::Quit { .. } => break 'running,
                 Event::KeyDown {
                     keycode: Some(keycode), ..
@@ -288,19 +288,19 @@ fn main() {
                     Mode::Default => match keycode {
                         Keycode::Left => {
                             step = if step > 0 { step - 1 } else { step };
-                        }
+                        },
                         Keycode::Right => {
                             step = if step < STEPS.len() - 1 { step + 1 } else { step };
-                        }
+                        },
                         Keycode::A => {
                             mode = Mode::SetLatitude;
                             buffer = String::new();
-                        }
+                        },
                         Keycode::O => {
                             mode = Mode::SetLongitude;
                             buffer = String::new();
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     },
                     Mode::SetLatitude => match keycode {
                         Keycode::Return => {
@@ -310,14 +310,14 @@ fn main() {
                                 }
                             }
                             mode = Mode::Default;
-                        }
+                        },
                         Keycode::Escape => {
                             buffer = String::new();
                             mode = Mode::Default;
-                        }
+                        },
                         _ => {
                             buffer.push_str(&keycode.to_string());
-                        }
+                        },
                     },
                     Mode::SetLongitude => match keycode {
                         Keycode::Return => {
@@ -327,17 +327,17 @@ fn main() {
                                 }
                             }
                             mode = Mode::Default;
-                        }
+                        },
                         Keycode::Escape => {
                             buffer = String::new();
                             mode = Mode::Default;
-                        }
+                        },
                         _ => {
                             buffer.push_str(&keycode.to_string());
-                        }
+                        },
                     },
                 },
-                _ => {}
+                _ => {},
             }
         }
 
@@ -461,13 +461,13 @@ fn main() {
                     engine.time.format("%Y-%b-%d %H:%M:%S %Z"),
                     STEPS[step].name
                 )
-            }
+            },
             Mode::SetLatitude => {
                 format!("Set latitude: {}", buffer)
-            }
+            },
             Mode::SetLongitude => {
                 format!("Set longitude: {}", buffer)
-            }
+            },
         };
         let (texture, x, y) = render_text(&font, &texture_creator, &text);
         canvas
