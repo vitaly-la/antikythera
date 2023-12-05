@@ -33,9 +33,6 @@ struct Planet<'a> {
     sidereal: f64,
     phase: f64,
     texture: Option<Texture<'a>>,
-    r: u8,
-    g: u8,
-    b: u8,
 }
 
 struct Step {
@@ -132,9 +129,6 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
         let sidereal = parts.next().unwrap().parse::<f64>().unwrap();
         let phase = parts.next().unwrap().parse::<f64>().unwrap();
         let texture = parts.next().unwrap();
-        let r = parts.next().unwrap().parse::<u8>().unwrap();
-        let g = parts.next().unwrap().parse::<u8>().unwrap();
-        let b = parts.next().unwrap().parse::<u8>().unwrap();
         planets.push(Planet {
             name,
             semimajor,
@@ -148,9 +142,6 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
                         .unwrap_or_else(|_| panic!("Couldn't find {}", texture)),
                 ),
             },
-            r,
-            g,
-            b,
         });
     }
     planets
@@ -416,12 +407,10 @@ fn main() {
                     .copy(
                         planet.texture.as_ref().unwrap(),
                         None,
-                        Rect::new((x - 10).into(), (y - 10).into(), 20, 20),
+                        Rect::new((x - 8).into(), (y - 8).into(), 16, 16),
                     )
                     .unwrap(),
-                None => canvas
-                    .filled_circle(x, y, 7, Color::RGB(planet.r, planet.g, planet.b))
-                    .unwrap(),
+                None => canvas.filled_circle(x, y, 8, Color::RGB(255, 255, 255)).unwrap(),
             }
             canvas.text(&planet.name, &small_font, x, y, 10);
         }
