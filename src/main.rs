@@ -200,6 +200,7 @@ fn render_text<'a, T>(
 
 trait Astro {
     fn text(&mut self, text: &str, font: &Font, x: i16, y: i16, obj_size: i16);
+    fn aa_filled_circle(&mut self, x: i16, y: i16, rad: i16, color: Color);
 }
 
 impl Astro for Canvas<Window> {
@@ -217,6 +218,13 @@ impl Astro for Canvas<Window> {
             ),
         )
         .unwrap();
+    }
+
+    fn aa_filled_circle(&mut self, x: i16, y: i16, rad: i16, color: Color) {
+        self.filled_circle(x, y, rad, color).unwrap();
+        if rad >= 2 {
+            self.aa_circle(x, y, rad, color).unwrap();
+        }
     }
 }
 
@@ -340,14 +348,12 @@ fn main() {
 
         let (width, height) = canvas.logical_size();
         let radius = min(width, height - PANEL_SIZE) / 2;
-        canvas
-            .filled_circle(
-                (width / 2).try_into().unwrap(),
-                ((height - PANEL_SIZE) / 2).try_into().unwrap(),
-                radius.try_into().unwrap(),
-                Color::RGB(0, 0, 0),
-            )
-            .unwrap();
+        canvas.aa_filled_circle(
+            (width / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2).try_into().unwrap(),
+            radius.try_into().unwrap(),
+            Color::RGB(0, 0, 0),
+        );
 
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
@@ -357,9 +363,7 @@ fn main() {
                 0 => canvas
                     .pixel(x, y, Color::RGB(brightness, brightness, brightness))
                     .unwrap(),
-                _ => canvas
-                    .filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness))
-                    .unwrap(),
+                _ => canvas.aa_filled_circle(x, y, size, Color::RGB(brightness, brightness, brightness)),
             }
             if let Some(name) = &star.name {
                 canvas.text(name, &small_font, x, y, 5)
@@ -368,7 +372,7 @@ fn main() {
 
         let (alt, az) = engine.get_sun_position();
         let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
-        canvas.filled_circle(x, y, 15, Color::RGB(255, 255, 255)).unwrap();
+        canvas.aa_filled_circle(x, y, 15, Color::RGB(255, 255, 255));
         canvas.text("Sun", &small_font, x, y, 15);
 
         for planet in &planets {
@@ -382,7 +386,7 @@ fn main() {
                         Rect::new((x - 8).into(), (y - 8).into(), 16, 16),
                     )
                     .unwrap(),
-                None => canvas.filled_circle(x, y, 8, Color::RGB(255, 255, 255)).unwrap(),
+                None => canvas.aa_filled_circle(x, y, 8, Color::RGB(255, 255, 255)),
             }
             canvas.text(&planet.name, &small_font, x, y, 10);
         }
