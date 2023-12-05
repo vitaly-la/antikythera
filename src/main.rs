@@ -348,34 +348,6 @@ fn main() {
                 Color::RGB(0, 0, 0),
             )
             .unwrap();
-        canvas.text(
-            "N",
-            &font,
-            (width / 2).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2 - radius + 25).try_into().unwrap(),
-            0,
-        );
-        canvas.text(
-            "E",
-            &font,
-            (width / 2 - radius + 10).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
-            0,
-        );
-        canvas.text(
-            "S",
-            &font,
-            (width / 2).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2 + radius).try_into().unwrap(),
-            0,
-        );
-        canvas.text(
-            "W",
-            &font,
-            (width / 2 + radius - 10).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
-            0,
-        );
 
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
@@ -430,7 +402,35 @@ fn main() {
             .unwrap();
         canvas.text("Moon", &small_font, x, y, 15);
 
-        let (width, height) = canvas.logical_size();
+        canvas.text(
+            "N",
+            &font,
+            (width / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 - radius + 25).try_into().unwrap(),
+            0,
+        );
+        canvas.text(
+            "E",
+            &font,
+            (width / 2 - radius + 10).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
+            0,
+        );
+        canvas.text(
+            "S",
+            &font,
+            (width / 2).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + radius).try_into().unwrap(),
+            0,
+        );
+        canvas.text(
+            "W",
+            &font,
+            (width / 2 + radius - 10).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
+            0,
+        );
+
         canvas
             .box_(
                 0,
@@ -440,7 +440,6 @@ fn main() {
                 Color::RGB(0, 0, 0),
             )
             .unwrap();
-
         let text = match mode {
             Mode::Default => {
                 format!(
