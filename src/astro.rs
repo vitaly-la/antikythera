@@ -32,7 +32,7 @@ const INITIAL_NODAL_PHASE: f64 = 5.0; // eclipse
 const NODAL_PERIOD: f64 = 18.61 * SIDEREAL;
 
 const EARTH_RADIUS: f64 = 6371.0;
-const EARTH_TO_MOON_DISTANCE: f64 = 378000.0;
+const EARTH_TO_MOON_DISTANCE: f64 = 385000.0;
 
 const X_UNIT: Vector3D<f64, U> = vec3(1.0, 0.0, 0.0);
 const Z_UNIT: Vector3D<f64, U> = vec3(0.0, 0.0, 1.0);
@@ -188,10 +188,10 @@ impl Engine {
         let nodal_phase = get_phase(self.ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
         let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
 
+        let to_moon = (to_moon * EARTH_TO_MOON_DISTANCE - self.normal * EARTH_RADIUS).normalize();
+
         let sun_phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
         let to_sun = get_sun_direction(sun_phase);
-
-        let to_moon = (to_moon * EARTH_TO_MOON_DISTANCE - self.normal * EARTH_RADIUS).normalize();
 
         let alt = get_altitude(self.normal, to_moon);
         let az = get_azimuth(self.normal, self.north, to_moon);
