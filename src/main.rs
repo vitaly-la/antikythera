@@ -19,14 +19,14 @@ use sdl2::video::Window;
 
 mod astro;
 
-struct Star {
+pub struct Star {
     name: Option<String>,
-    pub ascension: f64,
-    pub declination: f64,
-    pub magnitude: f64,
+    ascension: f64,
+    declination: f64,
+    magnitude: f64,
 }
 
-struct Planet<'a> {
+pub struct Planet<'a> {
     name: String,
     semimajor: f64,
     sidereal: f64,
