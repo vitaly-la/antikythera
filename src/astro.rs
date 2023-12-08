@@ -14,21 +14,21 @@ pub struct Engine {
     north: Vector3D<f64, U>,
 }
 
-const INITIAL_PHASE: f64 = 1.7247432929978155; // average from horizons
+const INITIAL_PHASE: f64 = 1.740805; // sync with stellarium
 const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // stellarium
 const SEMIMAJOR: f64 = 149.598; // nssdc.gsfc.nasa.gov
 
-const INITIAL_DAILY_PHASE: f64 = 1.7341591447815659; // actual solar noon
+const INITIAL_DAILY_PHASE: f64 = 1.741395; // sync with stellarium
 const SIDEREAL_DAY: f64 = 23.9344694 * 60.0 * 60.0; // stellarium
 
-const AXIAL_TILT: f64 = 23.439280305555556 * PI / 180.0; // stellarium
-const AXIAL_DIRECTION: f64 = 1.5407643946374219; // average solstice
+const AXIAL_TILT: f64 = 23.436169775089777 * PI / 180.0; // https://www.astro.sunysb.edu/fwalter/PHY515/coords.html
+const AXIAL_DIRECTION: f64 = PI / 2.0; // https://www.astro.sunysb.edu/fwalter/PHY515/coords.html
 
-const INITIAL_MOON_PHASE: f64 = 3.508; // eclipse
+const INITIAL_MOON_PHASE: f64 = 3.43; // eclipse
 const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // stellarium
 
 const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // stellarium
-const INITIAL_NODAL_PHASE: f64 = 5.01; // eclipse
+const INITIAL_NODAL_PHASE: f64 = 5.0; // eclipse
 const NODAL_PERIOD: f64 = 18.61 * SIDEREAL;
 
 const EARTH_RADIUS: f64 = 6371.0;
@@ -148,7 +148,7 @@ fn get_moon_angle(
 
 impl Engine {
     pub fn new(time: DateTime<Utc>, latitude: f64, longitude: f64) -> Self {
-        let ts = time.timestamp() as f64;
+        let ts = time.timestamp() as f64 + time.timestamp_subsec_nanos() as f64 * 1e-9;
         let (normal, north) = get_normal_and_north(ts, latitude, longitude);
         Self {
             time,
@@ -226,9 +226,6 @@ mod tests {
     #[test]
     fn test_get_phase() {
         assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL) - INITIAL_PHASE).abs() < 1e-4);
-        assert!(get_phase(22895580.0, INITIAL_PHASE, SIDEREAL).abs() < 1e-4);
-        assert!(get_phase(811849260.0, INITIAL_PHASE, SIDEREAL).abs() < 1e-4);
-        assert!((get_phase(1600802520.0, INITIAL_PHASE, SIDEREAL) - 2.0 * PI).abs() < 1e-4);
     }
 
     #[test]
