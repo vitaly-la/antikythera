@@ -45,7 +45,7 @@ enum Mode {
     SetLongitude,
 }
 
-const LAT: f64 = 51.4775 * PI / 180.0; // greenwich
+const LAT: f64 = 51.4769 / 180.0 * PI; // greenwich
 const LON: f64 = 0.0; // greenwich
 const INITIAL_SIZE: u32 = 960;
 const PANEL_SIZE: u32 = 30;
@@ -443,7 +443,7 @@ fn main() {
         let text = match mode {
             Mode::Default => {
                 format!(
-                    "lat: {:.4}; lon: {:.4}; {}; Speed: {}",
+                    "lat: {:.4}; lon: {:.4}; {}; Step: {}",
                     latitude / PI * 180.0,
                     longitude / PI * 180.0,
                     engine.time.format("%Y-%b-%d %H:%M:%S %Z"),
