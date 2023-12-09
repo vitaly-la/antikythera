@@ -15,7 +15,7 @@ pub struct Engine {
 }
 
 const INITIAL_PHASE: f64 = 1.740805; // sync with stellarium
-const SIDEREAL: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // stellarium
+const SIDEREAL_YEAR: f64 = 365.256363004 * 24.0 * 60.0 * 60.0; // stellarium
 const SEMIMAJOR: f64 = 149.598; // nssdc.gsfc.nasa.gov
 
 const INITIAL_DAILY_PHASE: f64 = 1.741395; // sync with stellarium
@@ -29,10 +29,7 @@ const SIDEREAL_MONTH: f64 = 27.321582 * 24.0 * 60.0 * 60.0; // stellarium
 
 const MOON_INCLINATION: f64 = 5.145396 * PI / 180.0; // stellarium
 const INITIAL_NODAL_PHASE: f64 = 5.0; // eclipse
-const NODAL_PERIOD: f64 = 18.61 * SIDEREAL;
-
-const EARTH_RADIUS: f64 = 6371.0;
-const EARTH_TO_MOON_DISTANCE: f64 = 385000.0;
+const NODAL_PERIOD: f64 = 18.61 * SIDEREAL_YEAR;
 
 const X_UNIT: Vector3D<f64, U> = vec3(1.0, 0.0, 0.0);
 const Z_UNIT: Vector3D<f64, U> = vec3(0.0, 0.0, 1.0);
@@ -45,8 +42,8 @@ fn rot_z(angle: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
     Rotation3D::around_z(Angle::radians(angle)).transform_vector3d(vec)
 }
 
-fn get_phase(ts: f64, initial_phase: f64, sidereal: f64) -> f64 {
-    (initial_phase + (ts / sidereal * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI)
+fn get_phase(ts: f64, initial_phase: f64, period: f64) -> f64 {
+    (initial_phase + (ts / period * 2.0 * PI) % (2.0 * PI)) % (2.0 * PI)
 }
 
 fn to_local_coords(lat: f64, lon: f64, vec: Vector3D<f64, U>) -> Vector3D<f64, U> {
@@ -172,7 +169,7 @@ impl Engine {
     }
 
     pub fn get_sun_position(&self) -> (f64, f64) {
-        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
+        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL_YEAR);
         let to_sun = get_sun_direction(phase);
 
         let alt = get_altitude(self.normal, to_sun);
@@ -188,9 +185,7 @@ impl Engine {
         let nodal_phase = get_phase(self.ts, INITIAL_NODAL_PHASE, NODAL_PERIOD);
         let to_moon = get_inclined_direction(to_moon, MOON_INCLINATION, nodal_phase);
 
-        let to_moon = (to_moon * EARTH_TO_MOON_DISTANCE - self.normal * EARTH_RADIUS).normalize();
-
-        let sun_phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
+        let sun_phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL_YEAR);
         let to_sun = get_sun_direction(sun_phase);
 
         let alt = get_altitude(self.normal, to_moon);
@@ -202,7 +197,7 @@ impl Engine {
     }
 
     pub fn get_planet_position(&self, planet: &Planet) -> (f64, f64) {
-        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL);
+        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL_YEAR);
         let to_earth = get_object_direction(phase);
 
         let phase = get_phase(self.ts, planet.phase, planet.sidereal);
@@ -225,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_get_phase() {
-        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL) - INITIAL_PHASE).abs() < 1e-4);
+        assert!((get_phase(0.0, INITIAL_PHASE, SIDEREAL_YEAR) - INITIAL_PHASE).abs() < 1e-4);
     }
 
     #[test]
