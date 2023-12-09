@@ -1,9 +1,7 @@
-use std::f64::consts::PI;
-
 use chrono::{DateTime, Utc};
 use euclid::{vec3, Angle, Rotation3D, Vector3D};
 
-use crate::{Planet, Star};
+use crate::{Planet, Star, PI};
 
 enum U {}
 

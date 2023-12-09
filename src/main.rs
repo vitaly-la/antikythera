@@ -6,18 +6,19 @@ use std::fs::read_to_string;
 
 use astro::Engine;
 use chrono::Utc;
+use painter::Painter;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::render::{Texture, TextureCreator};
 use sdl2::ttf;
 use sdl2::ttf::Font;
-use sdl2::video::Window;
 
 mod astro;
+mod painter;
 
 pub struct Star {
     name: Option<String>,
@@ -45,7 +46,7 @@ enum Mode {
     SetLongitude,
 }
 
-const LAT: f64 = 51.4769 / 180.0 * PI; // greenwich
+const LAT: f64 = 51.477 / 180.0 * PI; // greenwich
 const LON: f64 = 0.0; // greenwich
 const INITIAL_SIZE: u32 = 960;
 const PANEL_SIZE: u32 = 30;
@@ -197,36 +198,6 @@ fn render_text<'a, T>(
     (texture, x, y)
 }
 
-trait Astro {
-    fn text(&mut self, text: &str, font: &Font, x: i16, y: i16, obj_size: i16);
-    fn aa_filled_circle(&mut self, x: i16, y: i16, rad: i16, color: Color);
-}
-
-impl Astro for Canvas<Window> {
-    fn text(&mut self, text: &str, font: &Font, x: i16, y: i16, obj_size: i16) {
-        let texture_creator = self.texture_creator();
-        let (texture, xsize, ysize) = render_text(font, &texture_creator, text);
-        self.copy(
-            &texture,
-            None,
-            Rect::new(
-                (x - i16::try_from(xsize / 2).unwrap()).into(),
-                (y - obj_size - i16::try_from(ysize).unwrap()).into(),
-                xsize,
-                ysize,
-            ),
-        )
-        .unwrap();
-    }
-
-    fn aa_filled_circle(&mut self, x: i16, y: i16, rad: i16, color: Color) {
-        self.filled_circle(x, y, rad, color).unwrap();
-        if rad >= 2 {
-            self.aa_circle(x, y, rad, color).unwrap();
-        }
-    }
-}
-
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -351,6 +322,8 @@ fn main() {
             Color::RGB(0, 0, 0),
         );
 
+        canvas.draw_azimuthal_grid();
+
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
             let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
@@ -382,7 +355,7 @@ fn main() {
                         Rect::new((x - 8).into(), (y - 8).into(), 16, 16),
                     )
                     .unwrap(),
-                None => canvas.aa_filled_circle(x, y, 8, Color::RGB(255, 255, 255)),
+                None => canvas.aa_filled_circle(x, y, 7, Color::RGB(255, 255, 255)),
             }
             canvas.text(&planet.name, &small_font, x, y, 10);
         }
@@ -413,7 +386,7 @@ fn main() {
             "E",
             &font,
             (width / 2 - radius + 10).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + 14).try_into().unwrap(),
             0,
         );
         canvas.text(
@@ -427,7 +400,7 @@ fn main() {
             "W",
             &font,
             (width / 2 + radius - 10).try_into().unwrap(),
-            ((height - PANEL_SIZE) / 2 + 10).try_into().unwrap(),
+            ((height - PANEL_SIZE) / 2 + 14).try_into().unwrap(),
             0,
         );
 
