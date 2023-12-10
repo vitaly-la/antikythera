@@ -50,6 +50,7 @@ const LAT: f64 = 51.477 / 180.0 * PI; // greenwich
 const LON: f64 = 0.0; // greenwich
 const INITIAL_SIZE: u32 = 960;
 const PANEL_SIZE: u32 = 30;
+const STAR_LIMIT: usize = 1600;
 const STEPS: [Step; 11] = [
     Step {
         name: "-1 month",
@@ -97,25 +98,27 @@ const STEPS: [Step; 11] = [
     },
 ];
 
-fn read_stars(filename: &str) -> Vec<Star> {
+fn read_stars(filename: &str, limit: usize) -> Vec<Star> {
     let mut stars = Vec::new();
-    for line in read_to_string(filename).expect("Couldn't find stars.dat").lines() {
+    for line in read_to_string(filename)
+        .unwrap_or_else(|_| panic!("Couldn't find {}", filename))
+        .lines()
+    {
         let mut parts = line.split_whitespace();
-        let hour = parts.next().unwrap().parse::<f64>().unwrap();
-        let minute = parts.next().unwrap().parse::<f64>().unwrap();
+        let _ = parts.next();
+        let ascension = parts.next().unwrap().parse::<f64>().unwrap();
         let declination = parts.next().unwrap().parse::<f64>().unwrap();
         let magnitude = parts.next().unwrap().parse::<f64>().unwrap();
-        let name = parts.next().unwrap();
-        let name = match name {
-            "null" => None,
-            _ => Some(name.to_string()),
-        };
+        let name = parts.next();
         stars.push(Star {
-            name,
-            ascension: (hour * 60.0 + minute) / 24.0 / 60.0 * 2.0 * PI,
-            declination: declination / 180.0 * PI,
+            name: name.map(|name| name.to_string()),
+            ascension,
+            declination,
             magnitude,
         });
+        if stars.len() >= limit {
+            break;
+        }
     }
     stars
 }
@@ -178,8 +181,10 @@ fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
         (2, 255)
     } else if magnitude < 3.0 {
         (1, 255)
-    } else {
+    } else if magnitude < 4.0 {
         (0, 255)
+    } else {
+        (0, 127)
     }
 }
 
@@ -211,7 +216,7 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    let stars = read_stars("stars.dat");
+    let stars = read_stars("hip2.dat", STAR_LIMIT);
     let texture_creator = canvas.texture_creator();
     let moon_phases = load_moon_phases(&texture_creator);
     let planets = read_planets(&texture_creator, "planets.dat");
