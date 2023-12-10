@@ -352,12 +352,18 @@ fn main() {
         for planet in &planets {
             let (alt, az) = engine.get_planet_position(planet);
             let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
+            let (size_x, size_y) = if planet.name == "Saturn" { (40, 16) } else { (16, 16) };
             match planet.texture {
                 Some(_) => canvas
                     .copy(
                         planet.texture.as_ref().unwrap(),
                         None,
-                        Rect::new((x - 8).into(), (y - 8).into(), 16, 16),
+                        Rect::new(
+                            (x - size_x / 2).into(),
+                            (y - size_y / 2).into(),
+                            size_x.try_into().unwrap(),
+                            size_y.try_into().unwrap(),
+                        ),
                     )
                     .unwrap(),
                 None => canvas.aa_filled_circle(x, y, 7, Color::RGB(255, 255, 255)),
