@@ -3,6 +3,7 @@ extern crate sdl2;
 use std::cmp::min;
 use std::f64::consts::PI;
 use std::fs::read_to_string;
+use std::time::Duration;
 
 use astro::Engine;
 use chrono::Utc;
@@ -451,6 +452,7 @@ fn main() {
             .unwrap();
 
         canvas.present();
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 240));
     }
 }
 
