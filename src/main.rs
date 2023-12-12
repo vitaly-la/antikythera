@@ -51,7 +51,7 @@ const LAT: f64 = 51.477 / 180.0 * PI; // greenwich
 const LON: f64 = 0.0; // greenwich
 const INITIAL_SIZE: u32 = 960;
 const PANEL_SIZE: u32 = 30;
-const STAR_LIMIT: usize = 1600;
+const STAR_LIMIT: usize = 2000;
 const STEPS: [Step; 11] = [
     Step {
         name: "-1 month",
@@ -172,17 +172,17 @@ fn horizontal_to_canvas(alt: f64, az: f64, size: (u32, u32)) -> (i16, i16) {
 }
 
 fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
-    if magnitude < -1.0 {
+    if magnitude < -0.2 {
         (5, 255)
-    } else if magnitude < 0.0 {
+    } else if magnitude < 0.7 {
         (4, 255)
-    } else if magnitude < 1.0 {
+    } else if magnitude < 1.6 {
         (3, 255)
-    } else if magnitude < 2.0 {
+    } else if magnitude < 2.5 {
         (2, 255)
-    } else if magnitude < 3.0 {
+    } else if magnitude < 3.4 {
         (1, 255)
-    } else if magnitude < 4.0 {
+    } else if magnitude < 4.3 {
         (0, 255)
     } else {
         (0, 127)
@@ -353,7 +353,7 @@ fn main() {
         for planet in &planets {
             let (alt, az) = engine.get_planet_position(planet);
             let (x, y) = horizontal_to_canvas(alt, az, canvas.logical_size());
-            let (size_x, size_y) = if planet.name == "Saturn" { (40, 16) } else { (16, 16) };
+            let (size_x, size_y) = if planet.name == "Saturn" { (35, 14) } else { (16, 16) };
             match planet.texture {
                 Some(_) => canvas
                     .copy(
@@ -367,7 +367,7 @@ fn main() {
                         ),
                     )
                     .unwrap(),
-                None => canvas.aa_filled_circle(x, y, 7, Color::RGB(255, 255, 255)),
+                None => canvas.aa_filled_circle(x, y, 6, Color::RGB(255, 255, 255)),
             }
             canvas.text(&planet.name, &small_font, x, y, 10);
         }
@@ -478,9 +478,9 @@ mod tests {
     #[test]
     fn test_magnitude_to_size_and_brightness() {
         assert_eq!(magnitude_to_size_and_brightness(-1.5), (5, 255));
-        assert_eq!(magnitude_to_size_and_brightness(-0.5), (4, 255));
-        assert_eq!(magnitude_to_size_and_brightness(0.5), (3, 255));
-        assert_eq!(magnitude_to_size_and_brightness(1.5), (2, 255));
+        assert_eq!(magnitude_to_size_and_brightness(-0.5), (5, 255));
+        assert_eq!(magnitude_to_size_and_brightness(0.5), (4, 255));
+        assert_eq!(magnitude_to_size_and_brightness(1.5), (3, 255));
         assert_eq!(magnitude_to_size_and_brightness(2.5), (1, 255));
         assert_eq!(magnitude_to_size_and_brightness(3.5), (0, 255));
     }
