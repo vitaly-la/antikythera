@@ -200,6 +200,7 @@ impl Engine {
 
         let phase = get_phase(self.ts, planet.phase, planet.sidereal);
         let to_planet = get_object_direction(phase);
+        let to_planet = get_inclined_direction(to_planet, planet.inclination, planet.incl_phase);
 
         let earth_to_planet = (to_planet * planet.semimajor - to_earth * SEMIMAJOR).normalize();
 
