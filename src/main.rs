@@ -164,11 +164,16 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
 }
 
 fn horizontal_to_canvas(alt: f64, az: f64, size: (u32, u32)) -> (i16, i16) {
-    let r = 1.0 - alt * 2.0 / PI;
-    let msize = min(size.0, size.1 - PANEL_SIZE);
-    let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * r * az.sin()).round() as i16;
-    let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * r * az.cos()).round() as i16;
-    (x, y)
+    let zenith_angle = alt + PI / 2.0;
+    let r = zenith_angle.sin() / (1.0 - zenith_angle.cos());
+    if r < 10.0 {
+        let msize = min(size.0, size.1 - PANEL_SIZE);
+        let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * r * az.sin()).round() as i16;
+        let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * r * az.cos()).round() as i16;
+        (x, y)
+    } else {
+        (-1, -1)
+    }
 }
 
 fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
@@ -472,7 +477,7 @@ mod tests {
         assert_eq!(horizontal_to_canvas(0.0, PI, (640, 670)), (320, 640));
         assert_eq!(horizontal_to_canvas(0.0, 3.0 * PI / 2.0, (640, 670)), (640, 320));
 
-        assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, (640, 670)), (320, -320));
+        assert_eq!(horizontal_to_canvas(-PI / 2.0, 0.0, (640, 670)), (-1, -1));
     }
 
     #[test]
