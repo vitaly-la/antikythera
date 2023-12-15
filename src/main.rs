@@ -353,9 +353,10 @@ fn main() {
             stereographic_projection(ecliptic_points[2].0, ecliptic_points[2].1),
         );
         let (x, y) = stereo_to_canvas(ecliptic.0, ecliptic.1, canvas.logical_size());
-        canvas
-            .aa_circle(x, y, (radius as f64 * ecliptic.2).round() as i16, Color::RGB(255, 0, 0))
-            .unwrap();
+        let r = (radius as f64 * ecliptic.2).round() as i16;
+        // there's an issue with displaying large circles in sdl2, have to use arc instead
+        canvas.arc(x, y, r, 0, 180, Color::RGB(90, 0, 0)).unwrap();
+        canvas.arc(x, y, r, 180, 0, Color::RGB(90, 0, 0)).unwrap();
 
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);
