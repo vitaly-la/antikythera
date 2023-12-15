@@ -144,7 +144,7 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
             semimajor,
             sidereal,
             phase,
-            inclination,
+            inclination: inclination / 180.0 * PI,
             incl_phase,
             texture: match texture {
                 "null" => None,
