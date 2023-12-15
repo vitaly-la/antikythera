@@ -35,6 +35,8 @@ pub struct Planet<'a> {
     semimajor: f64,
     sidereal: f64,
     phase: f64,
+    inclination: f64,
+    incl_phase: f64,
     texture: Option<Texture<'a>>,
 }
 
@@ -134,12 +136,16 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
         let semimajor = parts.next().unwrap().parse::<f64>().unwrap();
         let sidereal = parts.next().unwrap().parse::<f64>().unwrap();
         let phase = parts.next().unwrap().parse::<f64>().unwrap();
+        let inclination = parts.next().unwrap().parse::<f64>().unwrap();
+        let incl_phase = parts.next().unwrap().parse::<f64>().unwrap();
         let texture = parts.next().unwrap();
         planets.push(Planet {
             name,
             semimajor,
             sidereal,
             phase,
+            inclination,
+            incl_phase,
             texture: match texture {
                 "null" => None,
                 _ => Some(

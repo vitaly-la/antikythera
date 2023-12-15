@@ -220,6 +220,7 @@ impl Engine {
 
         let phase = get_phase(self.ts, planet.phase, planet.sidereal);
         let to_planet = get_object_direction(phase);
+        let to_planet = get_inclined_direction(to_planet, planet.inclination, planet.incl_phase);
 
         let earth_to_planet = (to_planet * planet.semimajor - to_earth * SEMIMAJOR).normalize();
 
@@ -285,6 +286,8 @@ mod tests {
     #[test]
     fn test_get_inclined_direction() {
         assert!((get_inclined_direction(X_UNIT, PI / 2.0, 0.0) - Z_UNIT).length() < 1e-15);
+        assert!((get_inclined_direction(X_UNIT, PI / 2.0, PI) + Z_UNIT).length() < 1e-15);
+        assert!((get_inclined_direction(Y_UNIT, PI / 2.0, 0.0) - Y_UNIT).length() < 1e-15);
         assert!((get_inclined_direction(Z_UNIT, PI / 2.0, 0.0) + X_UNIT).length() < 1e-15);
         assert!((get_inclined_direction(Z_UNIT, PI / 2.0, PI / 2.0) - Y_UNIT).length() < 1e-15);
     }
