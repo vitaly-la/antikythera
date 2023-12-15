@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -5,8 +7,7 @@ use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::ttf::Font;
 use sdl2::video::Window;
 
-use crate::{horizontal_to_canvas, PANEL_SIZE, PI};
-
+use crate::{horizontal_to_canvas, PANEL_SIZE};
 pub trait Painter {
     fn text(&mut self, text: &str, font: &Font, x: i16, y: i16, obj_size: i16);
     fn aa_filled_circle(&mut self, x: i16, y: i16, rad: i16, color: Color);

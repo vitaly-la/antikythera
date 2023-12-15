@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use astro::Engine;
 use chrono::Utc;
+use math::{circle_from_three_points, stereographic_projection};
 use painter::Painter;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::gfx::primitives::DrawRenderer;
@@ -19,6 +20,7 @@ use sdl2::ttf;
 use sdl2::ttf::Font;
 
 mod astro;
+mod math;
 mod painter;
 
 pub struct Star {
@@ -163,14 +165,18 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
     moon_phases
 }
 
+fn stereo_to_canvas(x: f64, y: f64, size: (u32, u32)) -> (i16, i16) {
+    let msize = min(size.0, size.1 - PANEL_SIZE);
+    let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * x).round() as i16;
+    let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * y).round() as i16;
+    (x, y)
+}
+
 fn horizontal_to_canvas(alt: f64, az: f64, size: (u32, u32)) -> (i16, i16) {
-    let zenith_angle = alt + PI / 2.0;
-    let r = zenith_angle.sin() / (1.0 - zenith_angle.cos());
+    let (x, y) = stereographic_projection(alt, az);
+    let r = x.hypot(y);
     if r < 10.0 {
-        let msize = min(size.0, size.1 - PANEL_SIZE);
-        let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * r * az.sin()).round() as i16;
-        let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * r * az.cos()).round() as i16;
-        (x, y)
+        stereo_to_canvas(x, y, size)
     } else {
         (-1, -1)
     }
@@ -334,6 +340,16 @@ fn main() {
         );
 
         canvas.draw_azimuthal_grid();
+        let ecliptic_points = engine.get_ecliptic_points();
+        let ecliptic = circle_from_three_points(
+            stereographic_projection(ecliptic_points[0].0, ecliptic_points[0].1),
+            stereographic_projection(ecliptic_points[1].0, ecliptic_points[1].1),
+            stereographic_projection(ecliptic_points[2].0, ecliptic_points[2].1),
+        );
+        let (x, y) = stereo_to_canvas(ecliptic.0, ecliptic.1, canvas.logical_size());
+        canvas
+            .aa_circle(x, y, (radius as f64 * ecliptic.2).round() as i16, Color::RGB(255, 0, 0))
+            .unwrap();
 
         for star in &stars {
             let (alt, az) = engine.get_star_position(star);

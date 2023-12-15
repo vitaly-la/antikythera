@@ -1,7 +1,9 @@
+use std::f64::consts::PI;
+
 use chrono::{DateTime, Utc};
 use euclid::{vec3, Angle, Rotation3D, Vector3D};
 
-use crate::{Planet, Star, PI};
+use crate::{Planet, Star};
 
 enum U {}
 
@@ -174,6 +176,24 @@ impl Engine {
         let az = get_azimuth(self.normal, self.north, to_sun);
 
         (alt, az)
+    }
+
+    pub fn get_ecliptic_points(&self) -> [(f64, f64); 3] {
+        let phase = get_phase(self.ts, INITIAL_PHASE, SIDEREAL_YEAR);
+
+        let to_sun = get_sun_direction(phase);
+        let alt0 = get_altitude(self.normal, to_sun);
+        let az0 = get_azimuth(self.normal, self.north, to_sun);
+
+        let to_sun = get_sun_direction((phase + 2.0 * PI / 3.0) % (2.0 * PI));
+        let alt1 = get_altitude(self.normal, to_sun);
+        let az1 = get_azimuth(self.normal, self.north, to_sun);
+
+        let to_sun = get_sun_direction((phase + 4.0 * PI / 3.0) % (2.0 * PI));
+        let alt2 = get_altitude(self.normal, to_sun);
+        let az2 = get_azimuth(self.normal, self.north, to_sun);
+
+        [(alt0, az0), (alt1, az1), (alt2, az2)]
     }
 
     pub fn get_moon_position(&self) -> (f64, f64, f64, f64) {
