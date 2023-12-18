@@ -150,7 +150,7 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
                 "null" => None,
                 _ => Some(
                     texture_creator
-                        .load_texture(texture)
+                        .load_texture(format!("textures/{}", texture))
                         .unwrap_or_else(|_| panic!("Couldn't find {}", texture)),
                 ),
             },
@@ -164,7 +164,7 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
     for i in 0..24 {
         moon_phases.push(
             texture_creator
-                .load_texture(format!("moon_phases/{:02}.png", i).as_str())
+                .load_texture(format!("textures/moon_phases/{:02}.png", i).as_str())
                 .expect("Couldn't find textures in moon_phases/"),
         );
     }
@@ -172,16 +172,21 @@ fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
 }
 
 fn stereo_to_canvas(x: f64, y: f64, size: (u32, u32)) -> (i16, i16) {
-    let msize = min(size.0, size.1 - PANEL_SIZE);
-    let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * x).round() as i16;
-    let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * y).round() as i16;
-    (x, y)
+    let r = x.hypot(y);
+    if r < 30.0 {
+        let msize = min(size.0, size.1 - PANEL_SIZE);
+        let x = i16::try_from(size.0).unwrap() / 2 - (msize as f64 / 2.0 * x).round() as i16;
+        let y = i16::try_from(size.1 - PANEL_SIZE).unwrap() / 2 - (msize as f64 / 2.0 * y).round() as i16;
+        (x, y)
+    } else {
+        (-1, -1)
+    }
 }
 
 fn horizontal_to_canvas(alt: f64, az: f64, size: (u32, u32)) -> (i16, i16) {
     let (x, y) = stereographic_projection(alt, az);
     let r = x.hypot(y);
-    if r < 10.0 {
+    if r < 30.0 {
         stereo_to_canvas(x, y, size)
     } else {
         (-1, -1)
