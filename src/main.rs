@@ -239,16 +239,16 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    let stars = read_stars("hip2.dat", STAR_LIMIT);
+    let stars = read_stars("data/hip2.dat", STAR_LIMIT);
     let texture_creator = canvas.texture_creator();
     let moon_phases = load_moon_phases(&texture_creator);
-    let planets = read_planets(&texture_creator, "planets.dat");
+    let planets = read_planets(&texture_creator, "data/planets.dat");
     let ttf_context = ttf::init().unwrap();
     let font = ttf_context
-        .load_font("NotoSansMono-Light.ttf", 20)
+        .load_font("fonts/NotoSansMono-Light.ttf", 20)
         .expect("Couldn't find NotoSansMono-Light.ttf");
     let small_font = ttf_context
-        .load_font("NotoSansMono-Light.ttf", 14)
+        .load_font("fonts/NotoSansMono-Light.ttf", 14)
         .expect("Couldn't find NotoSansMono-Light.ttf");
 
     canvas
