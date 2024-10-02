@@ -1,11 +1,16 @@
-let pkgs = import (fetchTarball("https://github.com/NixOS/nixpkgs/archive/refs/tags/24.05.tar.gz")) {};
+{ pkgs ? import <nixpkgs> { } }:
 
-in pkgs.mkShell {
+pkgs.rustPlatform.buildRustPackage rec {
+  pname = "antikythera";
+  version = "0.1.0";
+
   buildInputs = with pkgs; [
-    cargo
     SDL2
+    SDL2_gfx
     SDL2_image
     SDL2_ttf
-    SDL2_gfx
   ];
+
+  src = pkgs.lib.cleanSource ./.;
+  cargoLock.lockFile = ./Cargo.lock;
 }
