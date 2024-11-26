@@ -1,8 +1,12 @@
-extern crate sdl2;
+mod astro;
+mod math;
+mod painter;
 
 use std::cmp::min;
+use std::env;
 use std::f64::consts::PI;
 use std::fs::read_to_string;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use astro::Engine;
@@ -18,10 +22,6 @@ use sdl2::rect::Rect;
 use sdl2::render::{Texture, TextureCreator};
 use sdl2::ttf;
 use sdl2::ttf::Font;
-
-mod astro;
-mod math;
-mod painter;
 
 pub struct Star {
     name: Option<String>,
@@ -128,7 +128,11 @@ fn read_stars(filename: &str, limit: usize) -> Vec<Star> {
     stars
 }
 
-fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str) -> Vec<Planet<'a>> {
+fn read_planets<'a, T>(
+    texture_creator: &'a TextureCreator<T>,
+    filename: &str,
+    resources_path: &Path,
+) -> Vec<Planet<'a>> {
     let mut planets = Vec::new();
     for line in read_to_string(filename).expect("Couldn't find planets.dat").lines() {
         let mut parts = line.split_whitespace();
@@ -150,7 +154,7 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
                 "null" => None,
                 _ => Some(
                     texture_creator
-                        .load_texture(format!("textures/{}", texture))
+                        .load_texture(resources_path.join(format!("textures/{}", texture)).to_str().unwrap())
                         .unwrap_or_else(|_| panic!("Couldn't find {}", texture)),
                 ),
             },
@@ -159,12 +163,17 @@ fn read_planets<'a, T>(texture_creator: &'a TextureCreator<T>, filename: &'a str
     planets
 }
 
-fn load_moon_phases<T>(texture_creator: &TextureCreator<T>) -> Vec<Texture> {
+fn load_moon_phases<'a, T>(texture_creator: &'a TextureCreator<T>, resources_path: &Path) -> Vec<Texture<'a>> {
     let mut moon_phases = Vec::new();
     for i in 0..24 {
         moon_phases.push(
             texture_creator
-                .load_texture(format!("textures/moon_phases/{:02}.png", i).as_str())
+                .load_texture(
+                    resources_path
+                        .join(format!("textures/moon_phases/{:02}.png", i))
+                        .to_str()
+                        .unwrap(),
+                )
                 .expect("Couldn't find textures in moon_phases/"),
         );
     }
@@ -227,6 +236,7 @@ fn render_text<'a, T>(
 }
 
 fn main() {
+    let resources_path = PathBuf::from(env::var("RESOURCES_DIR").expect("RESOURCES_DIR not set"));
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -239,16 +249,26 @@ fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    let stars = read_stars("data/hip2.dat", STAR_LIMIT);
+    let stars = read_stars(resources_path.join("data/hip2.dat").to_str().unwrap(), STAR_LIMIT);
     let texture_creator = canvas.texture_creator();
-    let moon_phases = load_moon_phases(&texture_creator);
-    let planets = read_planets(&texture_creator, "data/planets.dat");
+    let moon_phases = load_moon_phases(&texture_creator, &resources_path);
+    let planets = read_planets(
+        &texture_creator,
+        resources_path.join("data/planets.dat").to_str().unwrap(),
+        &resources_path,
+    );
     let ttf_context = ttf::init().unwrap();
     let font = ttf_context
-        .load_font("fonts/NotoSansMono-Light.ttf", 20)
+        .load_font(
+            resources_path.join("fonts/NotoSansMono-Light.ttf").to_str().unwrap(),
+            20,
+        )
         .expect("Couldn't find NotoSansMono-Light.ttf");
     let small_font = ttf_context
-        .load_font("fonts/NotoSansMono-Light.ttf", 14)
+        .load_font(
+            resources_path.join("fonts/NotoSansMono-Light.ttf").to_str().unwrap(),
+            14,
+        )
         .expect("Couldn't find NotoSansMono-Light.ttf");
 
     canvas
@@ -274,7 +294,7 @@ fn main() {
                     ..
                 } => {
                     canvas.set_logical_size(width as u32, height as u32).unwrap();
-                },
+                }
                 Event::Quit { .. } => break 'running,
                 Event::KeyDown {
                     keycode: Some(keycode), ..
@@ -282,19 +302,19 @@ fn main() {
                     Mode::Default => match keycode {
                         Keycode::Left => {
                             step = if step > 0 { step - 1 } else { step };
-                        },
+                        }
                         Keycode::Right => {
                             step = if step < STEPS.len() - 1 { step + 1 } else { step };
-                        },
+                        }
                         Keycode::A => {
                             mode = Mode::SetLatitude;
                             buffer = String::new();
-                        },
+                        }
                         Keycode::O => {
                             mode = Mode::SetLongitude;
                             buffer = String::new();
-                        },
-                        _ => {},
+                        }
+                        _ => {}
                     },
                     Mode::SetLatitude => match keycode {
                         Keycode::Return => {
@@ -304,14 +324,14 @@ fn main() {
                                 }
                             }
                             mode = Mode::Default;
-                        },
+                        }
                         Keycode::Escape => {
                             buffer = String::new();
                             mode = Mode::Default;
-                        },
+                        }
                         _ => {
                             buffer.push_str(&keycode.to_string());
-                        },
+                        }
                     },
                     Mode::SetLongitude => match keycode {
                         Keycode::Return => {
@@ -321,17 +341,17 @@ fn main() {
                                 }
                             }
                             mode = Mode::Default;
-                        },
+                        }
                         Keycode::Escape => {
                             buffer = String::new();
                             mode = Mode::Default;
-                        },
+                        }
                         _ => {
                             buffer.push_str(&keycode.to_string());
-                        },
+                        }
                     },
                 },
-                _ => {},
+                _ => {}
             }
         }
 
@@ -467,13 +487,13 @@ fn main() {
                     engine.time.format("%Y-%b-%d %H:%M:%S %Z"),
                     STEPS[step].name
                 )
-            },
+            }
             Mode::SetLatitude => {
                 format!("Set latitude: {}", buffer)
-            },
+            }
             Mode::SetLongitude => {
                 format!("Set longitude: {}", buffer)
-            },
+            }
         };
         let (texture, x, y) = render_text(&font, &texture_creator, &text);
         canvas
