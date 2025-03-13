@@ -9,6 +9,7 @@ use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use crate::painter::render_text;
 use astro::Engine;
 use chrono::Utc;
 use math::{circle_from_three_points, stereographic_projection};
@@ -21,7 +22,6 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Texture, TextureCreator};
 use sdl2::ttf;
-use sdl2::ttf::Font;
 
 pub struct Star {
     name: Option<String>,
@@ -218,21 +218,6 @@ fn magnitude_to_size_and_brightness(magnitude: f64) -> (i16, u8) {
     } else {
         (0, 127)
     }
-}
-
-fn render_text<'a, T>(
-    font: &'a Font<'a, 'a>,
-    texture_creator: &'a TextureCreator<T>,
-    text: &'a str,
-) -> (Texture<'a>, u32, u32) {
-    let texture = font
-        .render(text)
-        .blended(Color::RGB(0, 255, 0))
-        .unwrap()
-        .as_texture(texture_creator)
-        .unwrap();
-    let (x, y) = font.size_of(text).unwrap();
-    (texture, x, y)
 }
 
 fn main() {
