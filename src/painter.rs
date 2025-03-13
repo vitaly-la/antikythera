@@ -15,7 +15,7 @@ pub trait Painter {
     fn draw_azimuthal_grid(&mut self);
 }
 
-fn render_text<'a, T>(
+pub fn render_text<'a, T>(
     font: &'a Font<'a, 'a>,
     texture_creator: &'a TextureCreator<T>,
     text: &'a str,
